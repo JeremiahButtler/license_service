@@ -90,7 +90,7 @@ class StatusController extends ControllerBase {
       $seatText = $this->t('Unlimited (no cap configured in license)');
     }
     else {
-      $seatText = $this->t('@used / @cap authorized seats used', [
+      $seatText = $this->t('@used / @cap premium seats used', [
         '@used' => $seats['used'],
         '@cap'  => $seats['cap'],
       ]);
@@ -100,7 +100,7 @@ class StatusController extends ControllerBase {
     // License features from the envelope.
     $build['envelope_title'] = ['#markup' => '<h3>' . $this->t('License capabilities') . '</h3>'];
     $featRows = [];
-    $featRows[] = [$this->t('Configured tiers'), implode(', ', $envelope['allowed_levels'])];
+    $featRows[] = [$this->t('Allowed levels'), implode(', ', $envelope['allowed_levels'])];
     $featRows[] = [$this->t('Field gating'), $envelope['field_gating'] ? $this->t('Enabled') : $this->t('Disabled')];
     $featRows[] = [
       $this->t('Download gating'),

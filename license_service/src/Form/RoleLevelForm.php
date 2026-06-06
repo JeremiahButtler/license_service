@@ -9,12 +9,12 @@ use Drupal\user\RoleStorageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Maps Drupal roles to license levels and enforces seat caps.
+ * Maps Drupal roles to license levels.
  *
  * Each role is assigned a license level (free, standard, premium, etc.).
- * The available levels are constrained by the license envelope (allowed_levels
- * from the signed token), so options beyond what the license permits are
- * displayed as disabled.
+ * Available levels come from the tenant-defined License Tiers config — any
+ * tier the admin created here is available for assignment. There are no
+ * server-side level restrictions.
  *
  * Author: Jeremiah Buttler
  */

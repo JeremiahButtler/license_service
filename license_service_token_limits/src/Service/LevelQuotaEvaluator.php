@@ -72,6 +72,12 @@ class LevelQuotaEvaluator {
       return NULL;
     }
 
+    // Bail when the signed license envelope does not grant quota features.
+    $envelope = $this->licenseProvider->getEnvelope();
+    if (empty($envelope['quotas'])) {
+      return NULL;
+    }
+
     // Accounts with a bypass permission skip quota enforcement entirely.
     if ($account->hasPermission('bypass ai token usage limits')
       || $account->hasPermission('bypass license gate')

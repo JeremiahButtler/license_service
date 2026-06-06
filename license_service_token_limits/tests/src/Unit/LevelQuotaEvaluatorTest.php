@@ -31,6 +31,8 @@ class LevelQuotaEvaluatorTest extends TestCase {
    *   Whether the module's 'enabled' flag is set in config.
    * @param array $levelQuotas
    *   The 'quotas' value to return from config, keyed by level name.
+   * @param bool $envelopeQuotas
+   *   Value of $envelope['quotas'] from the license provider.
    * @param string $accountLevel
    *   The level returned by getLevelForAccount() for non-anonymous accounts.
    * @param int $tokensUsed
@@ -42,10 +44,12 @@ class LevelQuotaEvaluatorTest extends TestCase {
   private function buildEvaluator(
     bool $enabled = TRUE,
     array $levelQuotas = [],
+    bool $envelopeQuotas = TRUE,
     string $accountLevel = 'standard',
     int $tokensUsed = 0,
   ): LevelQuotaEvaluator {
     $provider = $this->createMock(LicenseFeatureProviderInterface::class);
+    $provider->method('getEnvelope')->willReturn(['quotas' => $envelopeQuotas]);
     $provider->method('getLevelForAccount')->willReturn($accountLevel);
 
     $aggregator = $this->createMock(UsageAggregatorInterface::class);
@@ -185,6 +189,20 @@ class LevelQuotaEvaluatorTest extends TestCase {
     );
     $account = $this->buildAccount(grantedPermissions: ['bypass license gate']);
     $this->assertNull($evaluator->getExceededInfo($account));
+  }
+
+  /**
+   * Returns NULL when the license envelope does not permit quotas.
+   *
+   * @covers ::getExceededInfo
+   */
+  public function testEnvelopeQuotasFalseIsNull(): void {
+    $evaluator = $this->buildEvaluator(
+      levelQuotas: ['standard' => ['amount' => 100, 'period' => 'month']],
+      envelopeQuotas: FALSE,
+      tokensUsed: 9999,
+    );
+    $this->assertNull($evaluator->getExceededInfo($this->buildAccount()));
   }
 
 }
