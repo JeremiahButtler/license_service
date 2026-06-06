@@ -21,6 +21,7 @@ services:
       - '@license_service.license_client'
       - '@config.factory'
       - '@cache.default'
+      - '@cache_tags.invalidator'
 
   # Public cross-module entitlement API consumed by licensed add-on modules
   # (e.g. AI Token Counter). The service id 'license_service.manager' is the first
