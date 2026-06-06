@@ -1,4 +1,4 @@
-﻿# Author: Jeremiah Buttler
+# Author: Jeremiah Buttler
 name: 'License Service Token Counter'
 type: module
 description: 'Tracks AI token usage for every interaction made through the AI module, across any connected provider. Runs independently; estimated cost is added by the optional licensed Cost Engine submodule.'

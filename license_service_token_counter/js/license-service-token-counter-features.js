@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file
  * Client-side search/filter for the License Service Token Counter features page.
  *

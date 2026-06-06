@@ -1,4 +1,4 @@
-﻿# Author: Jeremiah Buttler
+# Author: Jeremiah Buttler
 
 # Config entity: one quota rule (amount + period + scope).
 license_service_token_counter.token_limit.*:

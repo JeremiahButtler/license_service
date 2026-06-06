@@ -1,4 +1,4 @@
-﻿# Author: Jeremiah Buttler
+# Author: Jeremiah Buttler
 #
 # Default user-token-usage view. Ships as an installed config entity so
 # administrators can edit it directly in the Views UI without writing YAML.

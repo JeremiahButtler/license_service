@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file
  * Real-time token usage polling for License Service Token Counter usage blocks.
  *

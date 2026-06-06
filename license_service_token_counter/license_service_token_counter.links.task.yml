@@ -1,4 +1,4 @@
-﻿# Author: Jeremiah Buttler
+# Author: Jeremiah Buttler
 license_service_token_counter.report:
   title: 'Usage'
   route_name: license_service_token_counter.report

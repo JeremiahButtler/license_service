@@ -1,4 +1,4 @@
-﻿# Author: Jeremiah Buttler
+# Author: Jeremiah Buttler
 
 # Legacy config object — kept so sites with this entry in config/sync do not
 # fail on config:import. The PricingResolver no longer reads from this object;

@@ -1,4 +1,4 @@
-﻿# Author: Jeremiah Buttler
+# Author: Jeremiah Buttler
 license_service_token_counter_engine.pricing.tab:
   title: 'Pricing'
   route_name: entity.pricing_table.collection
