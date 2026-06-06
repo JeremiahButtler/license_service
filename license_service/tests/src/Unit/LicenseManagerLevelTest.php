@@ -135,4 +135,8 @@ class LicenseManagerLevelTest extends TestCase {
     $manager = $this->buildManager(['r1' => 'premium', 'r2' => 'standard']);
     $this->assertTrue($manager->levelAtLeast('premium', 'free'));
     $this->assertTrue($manager->levelAtLeast('premium', 'premium'));
-    $this->assertFalse($manager-
+    $this->assertFalse($manager->levelAtLeast('free', 'premium'));
+    $this->assertTrue($manager->levelAtLeast('standard', 'free'));
+  }
+
+}

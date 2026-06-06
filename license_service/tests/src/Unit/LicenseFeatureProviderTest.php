@@ -3,6 +3,7 @@
 namespace Drupal\Tests\license_service\Unit;
 
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Session\AccountInterface;
@@ -51,7 +52,9 @@ class LicenseFeatureProviderTest extends TestCase {
     $cache = $this->createMock(CacheBackendInterface::class);
     $cache->method('get')->willReturn(FALSE);
 
-    $manager = new LicenseManagerService($client, $configFactory, $cache);
+    $cacheTagsInvalidator = $this->createMock(CacheTagsInvalidatorInterface::class);
+
+    $manager = new LicenseManagerService($client, $configFactory, $cache, $cacheTagsInvalidator);
     return new LicenseFeatureProvider($manager);
   }
 
@@ -159,7 +162,9 @@ class LicenseFeatureProviderTest extends TestCase {
     $cache = $this->createMock(CacheBackendInterface::class);
     $cache->method('get')->willReturn(FALSE);
 
-    $manager = new LicenseManagerService($client, $configFactory, $cache);
+    $cacheTagsInvalidator = $this->createMock(CacheTagsInvalidatorInterface::class);
+
+    $manager = new LicenseManagerService($client, $configFactory, $cache, $cacheTagsInvalidator);
     return new LicenseFeatureProvider($manager);
   }
 
