@@ -41,6 +41,12 @@ phpstan*.neon
 phpstan-drupal-stubs*.php
 phpcs-bootstrap.php
 
+# --- Project log (maintained locally, not tracked) ---
+PROJECT_LOG.md
+project-log.html
+license_service/PROJECT_LOG.md
+license_service/project-log.html
+
 # --- Drupal ---
 sites/*/files/
 sites/*/settings.local.php
