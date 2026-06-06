@@ -44,6 +44,7 @@ class EnforcementSubscriber implements EventSubscriberInterface {
     'user.login',
     'user.logout',
     'user.pass',
+    '<front>',
   ];
 
   public function __construct(
