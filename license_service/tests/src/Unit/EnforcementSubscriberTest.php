@@ -36,6 +36,36 @@ use Symfony\Component\HttpKernel\KernelEvents;
 class EnforcementSubscriberTest extends TestCase {
 
   // --------------------------------------------------------------------------
+  // Setup
+  // --------------------------------------------------------------------------
+
+  /**
+   * {@inheritdoc}
+   *
+   * Wires the two Drupal global-container services that EnforcementSubscriber
+   * touches at runtime: string_translation (via StringTranslationTrait::t())
+   * and url_generator (via Url::fromRoute()->toString()).
+   */
+  protected function setUp(): void {
+    parent::setUp();
+
+    $translator = $this->createMock(TranslationInterface::class);
+    $translator->method('translate')->willReturnArgument(0);
+    $translator->method('translateString')->willReturnCallback(
+      fn($string) => (string) $string
+    );
+
+    $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
+    $urlGenerator->method('generateFromRoute')->willReturn('/placeholder');
+    $urlGenerator->method('generate')->willReturn('/placeholder');
+
+    $container = new ContainerBuilder();
+    $container->set('string_translation', $translator);
+    $container->set('url_generator', $urlGenerator);
+    \Drupal::setContainer($container);
+  }
+
+  // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
 
