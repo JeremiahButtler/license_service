@@ -45,11 +45,3 @@ license_service.features:
     _title: 'Features'
   requirements:
     _permission: 'administer license gate'
-
-license_service.terms:
-  path: '/admin/config/license-service/terms'
-  defaults:
-    _controller: '\Drupal\license_service\Controller\TermsController::overview'
-    _title: 'Terms & Conditions'
-  requirements:
-    _permission: 'administer license gate'
