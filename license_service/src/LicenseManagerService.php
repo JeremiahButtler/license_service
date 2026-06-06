@@ -77,54 +77,53 @@ class LicenseManagerService {
   }
 
   /**
-   * Returns the license entitlement envelope for admin UI validation.
+   * Returns the license entitlement envelope.
    *
-   * The envelope constrains what the admin is permitted to configure:
-   * - allowed_levels: which level names may be assigned to roles.
-   * - max_premium_users: seat cap for premium roles (0 = unlimited).
-   * - capability flags: module features toggled by the license.
-   *
-   * The envelope is derived from the signed token's tier + features, so it
-   * cannot be forged by editing config.
+   * Tiers and feature flags are TENANT-defined (from local config, no server
+   * constraint). The only server-derived value is authorized_users — the
+   * maximum number of users the tenant's plan permits, as granted by the LVS.
    *
    * @return array{
    *   allowed_levels: string[],
+   *   authorized_users: int,
    *   max_premium_users: int,
    *   field_gating: bool,
    *   download_gating: bool,
    *   metered_views: bool,
    *   quotas: bool,
+   *   content_access: bool,
    *   }
    */
   public function getEnvelope(): array {
-    $status = $this->getStatus();
-    if (!$status['licensed']) {
-      return [
-        'allowed_levels'    => ['free'],
-        'max_premium_users' => 0,
-        'field_gating'      => FALSE,
-        'download_gating'   => FALSE,
-        'metered_views'     => FALSE,
-        'quotas'            => FALSE,
-      ];
-    }
+    $tiers = (array) ($this->configFactory->get('license_service.tiers')->get('tiers') ?? []);
 
-    $features = (array) ($status['features'] ?? []);
-    $tier     = $status['tier'] ?? 'free';
+    // Feature flags: TRUE when any configured tier enables the feature.
+    $anyFeature = static function (string $key) use ($tiers): bool {
+      foreach ($tiers as $tier) {
+        if (!empty($tier['features'][$key])) {
+          return TRUE;
+        }
+      }
+      return FALSE;
+    };
 
-    // Tier-based allowed_levels: higher tiers include lower levels.
-    // The actual level names are whatever the admin defines; the envelope
-    // constrains only how many are allowed and what features are on.
-    $tierLevels = $this->tieredLevels($tier);
+    // authorized_users is the ONE thing the LVS controls: the number of
+    // non-free users the tenant's plan permits. Fall back to max_premium_users
+    // for backward compatibility with older token payloads.
+    $features = (array) ($this->getStatus()['features'] ?? []);
+    $authorizedUsers = (int) ($features['authorized_users']
+      ?? $features['max_premium_users']
+      ?? 0);
 
     return [
-      'allowed_levels'    => $tierLevels,
-      // max_premium_users comes from the signed token feature flag.
-      'max_premium_users' => (int) ($features['max_premium_users'] ?? 0),
-      'field_gating'      => (bool) ($features['field_gating'] ?? ($tier !== 'free')),
-      'download_gating'   => (bool) ($features['download_gating'] ?? ($tier !== 'free')),
-      'metered_views'     => (bool) ($features['metered_views'] ?? TRUE),
-      'quotas'            => (bool) ($features['quotas'] ?? TRUE),
+      'allowed_levels'   => $this->getLevelOrder(),
+      'authorized_users' => $authorizedUsers,
+      'max_premium_users' => $authorizedUsers,  // backward-compat alias
+      'field_gating'     => $anyFeature('field_gating'),
+      'download_gating'  => $anyFeature('download_gating'),
+      'metered_views'    => $anyFeature('metered_views'),
+      'quotas'           => $anyFeature('quotas'),
+      'content_access'   => $anyFeature('content_access'),
     ];
   }
 
