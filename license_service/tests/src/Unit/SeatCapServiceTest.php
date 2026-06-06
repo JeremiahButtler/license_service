@@ -56,7 +56,10 @@ class SeatCapServiceTest extends TestCase {
     // levelAtLeast('premium', 'free') returns TRUE — any non-empty, non-free level is premium.
     $licenseManager->method('levelAtLeast')->willReturn(TRUE);
 
-    $licenseClient = $this->createMock(LicenseClient::class);
+    $licenseClient = $this->getMockBuilder(LicenseClient::class)
+      ->disableOriginalConstructor()
+      ->onlyMethods(['authorizeUser'])
+      ->getMock();
     $licenseClient->method('authorizeUser')->willReturn($lvsResponse);
 
     $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
