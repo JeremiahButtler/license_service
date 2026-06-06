@@ -27,6 +27,18 @@ use Psr\Log\LoggerInterface;
  */
 class QuotaEnforcementSubscriberTest extends TestCase {
 
+  protected function setUp(): void {
+    parent::setUp();
+    $translator = $this->createMock(TranslationInterface::class);
+    $translator->method('translate')->willReturnArgument(0);
+    $translator->method('translateString')->willReturnCallback(
+      fn($string) => (string) $string
+    );
+    $container = new ContainerBuilder();
+    $container->set('string_translation', $translator);
+    \Drupal::setContainer($container);
+  }
+
   // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
