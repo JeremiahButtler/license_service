@@ -494,3 +494,13 @@ class SeatCapServiceTest extends TestCase {
  * createMock() call stubs all required methods, including invalidateTags().
  */
 interface CombinedCacheInterface extends CacheBackendInterface, CacheTagsInvalidatorInterface {}
+
+/**
+ * Extended account interface for tests that need hasRole() on an AccountInterface mock.
+ *
+ * AccountInterface declares getRoles() but not hasRole(). SeatCapService calls
+ * hasRole() on its AccountInterface parameter, so the test mock must support it.
+ */
+interface AccountWithRolesInterface extends AccountInterface {
+  public function hasRole(string $rid): bool;
+}
