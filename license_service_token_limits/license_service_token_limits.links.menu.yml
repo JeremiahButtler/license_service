@@ -1,5 +1,29 @@
 license_service_token_limits.admin:
-  title: 'Token Limits'
-  route_name: license_service_token_limits.settings
+  title: 'Token Counter'
+  route_name: license_service_token_counter.settings
   parent: license_service.admin
   weight: 15
+
+license_service_token_limits.admin_limits:
+  title: 'Token Limits'
+  route_name: entity.token_limit.collection
+  parent: license_service.admin
+  weight: 16
+
+license_service_token_limits.admin_usage:
+  title: 'Token Usage'
+  route_name: license_service_token_counter.report
+  parent: license_service.admin
+  weight: 17
+
+license_service_token_limits.admin_pricing:
+  title: 'Token Pricing'
+  route_name: entity.pricing_table.collection
+  parent: license_service.admin
+  weight: 18
+
+license_service_token_limits.admin_features:
+  title: 'Token Features'
+  route_name: license_service_token_counter.features
+  parent: license_service.admin
+  weight: 19
