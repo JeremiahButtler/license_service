@@ -4,10 +4,10 @@ A Drupal 10/11 module that connects a Drupal website to the
 [License Verification Server](https://www.licenseverificationserver.com) and controls
 user access to content based on license level and user role.
 
-Site administrators activate a single site license using an API key, map Drupal
-user roles to license levels, and configure fine-grained content entitlements per
-level. The module enforces those entitlements across all content types through
-Drupal's native access system.
+Site administrators activate a single site license using an API key, define their own
+license tiers locally, map Drupal user roles to those tiers, and configure fine-grained
+content entitlements per level. The module enforces those entitlements across all content
+types through Drupal's native access system.
 
 ## Requirements
 
@@ -23,29 +23,42 @@ Drupal's native access system.
    drush en license_service
    ```
    Or navigate to **Admin → Extend**, search for "License Service", and enable it.
-3. Navigate to **Admin → Configuration → License Service → Settings** and enter
-   your license key.
-4. Click **Activate** to register this site with the License Verification Server.
+3. Navigate to **Admin → Configuration → License Service → Settings**, accept the
+   [terms and conditions](https://www.licenseverificationserver.com/terms), enter your
+   license key, and click **Activate**.
 
 ## Configuration
 
 ### License key
-Enter your API/license key at **Configuration → License Service → Settings**. Click
-**Activate** to bind this Drupal environment as a licensed site. The status panel
-shows your tier, expiry date, seats used, and any warnings (offline grace,
-expiry approaching).
+Enter your API/license key at **Configuration → License Service → Settings**. You must
+check the terms and conditions acceptance checkbox before activating. Click **Activate**
+to bind this Drupal environment as a licensed site. The status panel shows your tier,
+expiry date, seats used, and any warnings (offline grace, expiry approaching).
+
+### License Tiers
+At **Configuration → License Service → License Tiers**, define the tiers available on
+your site — for example *Free*, *Standard*, *Premium*. Each tier has a weight (controls
+ordering) and a set of feature flags that determine what is unlocked at that tier:
+- Field-level content gating
+- Download / file gating
+- Metered (limited) content views
+- AI token quota enforcement
+- Content access control rules
+
+Tiers are entirely local — the License Verification Server authorizes only a maximum
+number of non-free users per plan; everything else is decided here.
 
 ### Role → Level mapping
-At **Configuration → License Service → Role Levels**, map each Drupal user role to a
-license level (e.g. Free, Standard, Premium). Available levels are constrained by
-your site license's tier and feature envelope.
+At **Configuration → License Service → Role Levels**, map each Drupal user role to one
+of your locally-defined tiers. A user's effective tier is the highest across all their
+roles. The number of non-free users authorized by your LVS plan is shown for reference.
 
 ### Content entitlements
 At **Configuration → License Service → Content Rules**, configure per-level,
 per-content-type rules:
 - Which levels may view, create, edit, or delete nodes of each content type
-- Create/edit quotas (max nodes a user may create/edit per type)
-- Metered view limits (max premium views per period)
+- Create/edit quotas (max nodes a user may create/edit per type — lifetime)
+- Metered view limits (max content views per period — auto-resets each period)
 - Field-level access (which fields are visible at each level)
 - File and media download gating
 
@@ -59,39 +72,45 @@ The same list is searchable in your Drupal admin at
 
 ### Site License Management
 - **License activation** — Activate a license key and register this Drupal site as a licensed environment; each environment consumes one seat
+- **Terms acceptance** — A required terms-and-conditions checkbox must be checked before a key will be accepted, linking to the official LVS terms of service
 - **Offline Ed25519 verification** — Verify the license offline using the bundled Ed25519 public key on every request; no network call needed until the token's refresh window passes
 - **Online re-check on cron** — Automatically re-verify against the server when the token is past its `refresh_by` timestamp; no manual intervention needed
-- **24-hour offline grace** — Continue operating for 24 hours after the server becomes unreachable before enforcing a lockout (configurable)
+- **Offline grace window** — Continue operating for a server-configured grace period after the LVS becomes unreachable before enforcing a lockout
 - **Expiry warnings** — Surface non-fatal banners when the license is expiring within the configured warning window (default 7 days)
 - **Subscription support** — Honor `expires_at`; automatically downgrade the site to Free tier when a subscription lapses
 - **Trial license support** — Run in full-featured mode during a trial period; auto-downgrade when the trial ends
 - **Periodic heartbeat** — Send a lightweight heartbeat to the License Verification Server on every cron run to confirm the site is active
 - **Deactivate on demand** — Release the site's seat from the settings panel (useful when migrating to a new server)
 
+### Tenant-Defined License Tiers
+- **Local tier editor** — Define any number of named tiers (e.g. Free, Standard, Premium) entirely within your Drupal configuration; no server interaction required to create or modify tiers
+- **Feature flags per tier** — Each tier independently enables or disables field gating, download gating, metered views, AI quota enforcement, and content access control
+- **Drag-and-drop ordering** — Tiers are ordered by weight using Drupal's tabledrag; the ordering determines privilege levels for the role-to-tier resolver
+- **Free tier protection** — The *free* baseline tier is always present and cannot be deleted; all other tiers are freely created and removed
+- **LVS authorized-user count** — The License Verification Server grants a maximum number of non-free users per plan; the module displays this cap for reference but does not restrict tier definitions or feature flags
+
 ### Role-Based License Levels
-- **Role → Level mapping** — Map any Drupal user role to a named license level (e.g. Anonymous → Free, Editor → Standard, Publisher → Premium)
-- **Tiered site license** — Site license `tier` (e.g. Free / Pro / Enterprise) controls which levels and capabilities the admin is permitted to assign
-- **License envelope** — All admin-configured levels, caps, and rules are validated against the license's `features` envelope from the server; out-of-envelope settings are blocked
-- **Per-role seat caps** — Enforce a maximum number of users allowed in premium-mapped roles, driven by `features.max_premium_users` in the signed license token
-- **Seat-cap warnings** — Admin UI displays remaining premium seats and warns (or blocks) new role assignments that would exceed the cap
+- **Role → Tier mapping** — Map any Drupal user role to a named license tier (e.g. Subscriber → Standard, Editor → Premium)
+- **Highest-wins resolution** — A user's effective tier is the highest tier across all their roles, evaluated at access-check time
+- **Admin bypass** — Users with `bypass license gate` always receive the highest configured tier regardless of their role mapping
+- **Authorized-seat informational display** — The role-levels page shows the LVS-authorized seat count as a reference; role assignment itself is never blocked by the module
 
 ### Content Access Enforcement
-- **Premium-level view gating** — Tag content with a required access level (field or taxonomy); users may only view the content if their resolved level qualifies
-- **Whole content-type access** — Restrict entire content types so they are only visible to users at or above a specific level
-- **Field-level gating** — Control field visibility within a node based on the user's level (e.g. Free users see only the summary, Premium users see all fields and attachments)
-- **Create/edit quotas** — Per level, cap the number of nodes a user may create or edit per content type (e.g. Standard: 50 articles, Premium: unlimited)
-- **Metered period views** — Limit the number of premium content views a user may consume per period (e.g. 5 premium articles per month); resets on period rollover
-- **Download/file gating** — Gate file field and media entity downloads by license level, independent of the parent node's view access
+- **Whole content-type access** — Restrict entire content types so they are only visible to users at or above a specific tier
+- **Field-level gating** — Control field visibility within a node based on the user's tier (e.g. Free users see only the summary, Premium users see all fields and attachments)
+- **Create/edit quotas** — Per tier, cap the number of nodes a user may create or edit per content type (e.g. Standard: 50 articles, Premium: unlimited); counts are lifetime-cumulative
+- **Metered period views** — Limit the number of premium content views a user may consume per period (e.g. 5 premium articles per month); resets automatically each period
+- **Download/file gating** — Gate file field and media entity downloads by license tier, independent of the parent node's view access
 - **Drupal access API compliance** — All decisions use `AccessResult::forbidden()`, `::allowed()`, and `::neutral()` with correct cache contexts and tags, composing safely with core and other modules
 - **Admin bypass permission** — Users with `bypass license gate` permission are always granted access, ensuring administrators are never locked out
 
 ### Admin Interface
-- **Settings form** — Configure license key, server URL, offline grace hours, and expiry warning days; activate or deactivate in one click with immediate status feedback
+- **Settings form** — Configure license key, server URL, and expiry warning days; accept terms of service; activate or deactivate in one click with immediate status feedback
+- **License Tiers editor** — AJAX form for creating, reordering, and removing license tiers with per-tier feature flag checkboxes
 - **Live status panel** — Displays tier, expiry date, seats used/available, trial state, grace status, and all active warnings at a glance
-- **Role → Level matrix** — Visual form mapping every Drupal role to a license level, with envelope validation and seat-cap feedback
-- **Content rules grid** — Per-level × per-content-type configuration covering view, create, edit, delete access; quotas; metered view limits; field gating; and file/download gating — all in one collapsible grid
+- **Role → Tier matrix** — Visual table mapping every Drupal role to a locally-defined tier, with an informational display of the LVS authorized-seat count
+- **Content rules grid** — Per-tier × per-content-type configuration covering view, create, edit, delete access; quotas; metered view limits; field gating; and file/download gating — all in one collapsible grid
 - **Features page** — Searchable, filterable feature reference available to admins at **Configuration → License Service → Features**
-- **Terms & Conditions page** — Full terms of service readable in the Drupal admin at **Configuration → License Service → Terms & Conditions**
 
 ### License Enforcement & Status Reporting
 - **Site-wide enforcement subscriber** — Optional, admin-configurable behavior when the site license is missing or expired past grace: warn-only mode (admin nag banners) or enforcement mode (premium routes blocked; all users downgraded to Free)
@@ -101,10 +120,9 @@ The same list is searchable in your Drupal admin at
 ### AI Token Quota Enforcement (License Service: Token Limits sub-module)
 *Requires the `license_service_token_limits` sub-module to be enabled along with `license_service_token_counter`.*
 
-- **Per-level token quotas** — Configure a maximum token count and billing period (daily / weekly / monthly) for each license level; users whose cumulative AI token usage for the period meets or exceeds their level's quota are blocked from making further AI calls
-- **Hard block enforcement** — Quota enforcement is always-block: no warn-only mode. When a user is over quota the AI request is aborted before the model call, with a user-visible warning message and a watchdog notice
-- **Admin quota configuration form** — Manage per-level token limits at **Configuration → License Service → Token Limits** (gated by `administer license gate`); set token amounts and reset periods per configured license level
-- **License-envelope aware** — Quota enforcement activates only when the signed license token grants the `quotas` feature bit; sites on tiers that do not include quota enforcement are transparently unaffected
+- **Token Limits entity UI** — The token-limits admin page redirects to the full `TokenLimit` entity collection, providing add/edit/delete UI for granular per-scope limits (per-role, per-user, or site-total)
+- **Unified token-counter hub** — Token Counter, Token Limits, Token Usage, Token Pricing, and Token Features are all accessible from the **Configuration → License Service** menu section
+- **Hard block enforcement** — When a user is over quota the AI request is aborted before the model call, with a user-visible warning message and a watchdog notice
 - **Bypass-permission aware** — Users with `bypass ai token usage limits` or `bypass license gate` are always exempt from quota enforcement; anonymous users are never subject to per-level quotas
 - **Event priority ordering** — Fires at priority 90 on `PreGenerateResponseEvent`, after the token counter's per-rule enforcement at 100, so explicit AI-rule token limits always take precedence over level quotas
 - **Graceful degradation** — Subscribes to `PreGenerateResponseEvent` only when the `drupal/ai` module's event class is present; the sub-module loads cleanly even on AI module versions that predate the event
@@ -190,22 +208,20 @@ require adding a period column and key rotation to `license_service_quota`
 
 ## Licensing & Plans
 
-| Plan | Type | What you get |
-|---|---|---|
-| **Free** | Perpetual | Module enabled; basic role→level mapping; limited levels; read-only content rules |
-| **Pro** | Subscription | Full level assignment, content quotas, metered views, subscription enforcement |
-| **Enterprise** | Subscription | All Pro features + per-role seat caps, field-level gating, file/download gating, multi-environment seats |
-
-*Pricing and exact tier entitlements are configured on the License Verification
-Server and reflected in the license token issued to your site.*
+Tiers and their features are entirely defined by the site administrator in the
+**License Tiers** configuration. The License Verification Server grants only a
+maximum number of non-free authorized users per plan — billing, plan upgrades, and
+seat-overage handling are managed on the
+[LVS website](https://www.licenseverificationserver.com).
 
 ---
 
 ## Terms & Conditions
 
 See [TERMS.md](TERMS.md) for the full Terms & Conditions governing use of this module.
-The terms are also available in your Drupal admin at
-**Configuration → License Service → Terms & Conditions**.
+You must accept the terms of service at
+[licenseverificationserver.com/terms](https://www.licenseverificationserver.com/terms)
+before activating a license key.
 
 ## License
 
