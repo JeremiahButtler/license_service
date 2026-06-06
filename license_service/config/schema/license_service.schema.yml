@@ -24,6 +24,15 @@ license_service.settings:
       type: string
       label: 'warn_only or enforce'
 
+license_service.tiers:
+  type: config_object
+  label: 'License Service tier definitions'
+  mapping:
+    tiers:
+      type: mapping
+      label: 'License tiers (keyed by tier ID)'
+      mapping: {}
+
 license_service.role_levels:
   type: config_object
   label: 'License Service role level mappings'
