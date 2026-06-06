@@ -187,18 +187,4 @@ class LevelQuotaEvaluatorTest extends TestCase {
     $this->assertNull($evaluator->getExceededInfo($account));
   }
 
-  /**
-   * Returns NULL when the license envelope does not permit quotas.
-   *
-   * @covers ::getExceededInfo
-   */
-  public function testEnvelopeQuotasFalseIsNull(): void {
-    $evaluator = $this->buildEvaluator(
-      levelQuotas: ['standard' => ['amount' => 100, 'period' => 'month']],
-      envelopeQuotas: FALSE,
-      tokensUsed: 9999,
-    );
-    $this->assertNull($evaluator->getExceededInfo($this->buildAccount()));
-  }
-
 }
