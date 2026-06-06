@@ -473,7 +473,9 @@ class SeatCapServiceTest extends TestCase {
    * @covers ::clearGrantCache
    */
   public function testClearGrantCacheInvalidatesUserTag(): void {
-    $cache = $this->createMock(CacheBackendInterface::class);
+    $cache = $this->getMockBuilder(CacheBackendInterface::class)
+      ->onlyMethods(['invalidateTags'])
+      ->getMock();
     $cache->expects($this->once())->method('invalidateTags')->with(['lvs_grant:99']);
 
     $svc = $this->buildService(cache: $cache);
