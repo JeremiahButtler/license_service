@@ -3,6 +3,7 @@
 namespace Drupal\Tests\license_service\Unit;
 
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -51,7 +52,9 @@ class LicenseManagerLevelTest extends TestCase {
     $cache = $this->createMock(CacheBackendInterface::class);
     $cache->method('get')->willReturn(FALSE);
 
-    return new LicenseManagerService($client, $configFactory, $cache);
+    $cacheTagsInvalidator = $this->createMock(CacheTagsInvalidatorInterface::class);
+
+    return new LicenseManagerService($client, $configFactory, $cache, $cacheTagsInvalidator);
   }
 
   /**
@@ -132,8 +135,4 @@ class LicenseManagerLevelTest extends TestCase {
     $manager = $this->buildManager(['r1' => 'premium', 'r2' => 'standard']);
     $this->assertTrue($manager->levelAtLeast('premium', 'free'));
     $this->assertTrue($manager->levelAtLeast('premium', 'premium'));
-    $this->assertFalse($manager->levelAtLeast('free', 'premium'));
-    $this->assertTrue($manager->levelAtLeast('standard', 'free'));
-  }
-
-}
+    $this->assertFalse($manager-
