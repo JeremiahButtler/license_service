@@ -33,9 +33,3 @@ license_service.features.tab:
   title: 'Features'
   base_route: license_service.settings
   weight: 30
-
-license_service.terms.tab:
-  route_name: license_service.terms
-  title: 'Terms'
-  base_route: license_service.settings
-  weight: 40
