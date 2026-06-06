@@ -1,7 +1,7 @@
 license_service_token_limits.settings:
   path: '/admin/config/license-service/token-limits'
   defaults:
-    _controller: '\Drupal\license_service_token_limits\Controller\TokenLimitsRedirectController::redirect'
+    _controller: '\Drupal\license_service_token_limits\Controller\TokenLimitsRedirectController::execute'
     _title: 'Token Limits'
   requirements:
     _permission: 'administer license gate'
