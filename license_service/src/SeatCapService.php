@@ -99,7 +99,7 @@ class SeatCapService {
 
     // Determine the grant kind: 'admin' for Drupal administrators, 'user'
     // for all other premium roles.
-    $kind = $account->hasRole('administrator') ? 'admin' : 'user';
+    $kind = in_array('administrator', $account->getRoles(), TRUE) ? 'admin' : 'user';
     $uid  = (string) $account->id();
     $cid  = 'lvs_grant:' . $uid . ':' . $kind;
     $tag  = 'lvs_grant:' . $uid;
