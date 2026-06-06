@@ -1,0 +1,10 @@
+tiers:
+  free:
+    label: Free
+    weight: -10
+    features:
+      field_gating: false
+      download_gating: false
+      metered_views: false
+      quotas: false
+      content_access: false
