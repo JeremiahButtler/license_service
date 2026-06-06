@@ -485,3 +485,12 @@ class SeatCapServiceTest extends TestCase {
   }
 
 }
+
+/**
+ * Combined interface for mocking cache objects that support tag invalidation.
+ *
+ * Drupal cache backend services implement both CacheBackendInterface and
+ * CacheTagsInvalidatorInterface. This interface merges both so a single
+ * createMock() call stubs all required methods, including invalidateTags().
+ */
+interface CombinedCacheInterface extends CacheBackendInterface, CacheTagsInvalidatorInterface {}
