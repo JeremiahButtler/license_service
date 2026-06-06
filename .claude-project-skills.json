@@ -5,8 +5,8 @@
       "applied": "2026-06-04"
     },
     "project-tracking": {
-      "fingerprint": "sha256:e09faed94b15b094ce1dfabd9a87b431566eeefea7ac6d71321712c39c315dea",
-      "applied": "2026-06-04"
+      "fingerprint": "sha256:15569dbb1a34bcafa07b8ecef97ff4989f3050c4d0697ae37cd3910d08cf92f1",
+      "applied": "2026-06-06"
     },
     "standing-rules": {
       "fingerprint": "sha256:4b2d7f93d56e0a70c3b45e4b9b241961af65900a6d1260622e3da9a89f2219b6",
@@ -49,7 +49,7 @@
       "applied": "2026-06-03"
     },
     "licensed-program-client": {
-      "fingerprint": "sha256:8b13d7da9583d48e1f87bf9d2bb10bf1b8fee9983b10997c7cf3bf896746e331",
+      "fingerprint": "sha256:7450cca2cb81cbdc6276a249e071a21021ac18d2ccf694eab8501393a2a4f2f7",
       "applied": "2026-06-06"
     }
   },
