@@ -40,9 +40,3 @@ license_service.admin_features:
   route_name: license_service.features
   parent: license_service.admin
   weight: 30
-
-license_service.admin_terms:
-  title: 'Terms & Conditions'
-  route_name: license_service.terms
-  parent: license_service.admin
-  weight: 40
