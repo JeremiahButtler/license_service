@@ -111,7 +111,7 @@ class SeatCapServiceTest extends TestCase {
    * Builds a stubbed AccountInterface for the given UID with optional roles.
    */
   private function buildAccount(int $uid = 42, bool $isAdmin = FALSE, string $email = 'u@example.com'): AccountInterface {
-    $account = $this->createMock(AccountInterface::class);
+    $account = $this->createMock(AccountWithRolesInterface::class);
     $account->method('id')->willReturn($uid);
     $account->method('getEmail')->willReturn($email);
     $account->method('hasRole')->with('administrator')->willReturn($isAdmin);
