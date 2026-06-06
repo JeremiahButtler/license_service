@@ -7,9 +7,9 @@
  * Author: Jeremiah Buttler.
  */
 
-use Drupal\license_service_token_counter\Cost\UsageData;
-
 declare(strict_types=1);
+
+use Drupal\license_service_token_counter\Cost\UsageData;
 
 /**
  * Implements hook_schema().
