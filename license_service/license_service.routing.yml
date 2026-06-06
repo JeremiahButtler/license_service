@@ -6,6 +6,14 @@ license_service.settings:
   requirements:
     _permission: 'administer license gate'
 
+license_service.tiers:
+  path: '/admin/config/license-service/tiers'
+  defaults:
+    _form: '\Drupal\license_service\Form\TiersForm'
+    _title: 'License Tiers'
+  requirements:
+    _permission: 'administer license gate'
+
 license_service.role_levels:
   path: '/admin/config/license-service/role-levels'
   defaults:
