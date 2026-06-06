@@ -11,6 +11,12 @@ license_service.admin_settings:
   parent: license_service.admin
   weight: -10
 
+license_service.admin_tiers:
+  title: 'License Tiers'
+  route_name: license_service.tiers
+  parent: license_service.admin
+  weight: -5
+
 license_service.admin_role_levels:
   title: 'Role Levels'
   route_name: license_service.role_levels
