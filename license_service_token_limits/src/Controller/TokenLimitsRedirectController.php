@@ -18,7 +18,7 @@ class TokenLimitsRedirectController extends ControllerBase {
   /**
    * Redirects to the TokenLimit entity collection admin page.
    */
-  public function redirect(): RedirectResponse {
+  public function execute(): RedirectResponse {
     return new RedirectResponse(
       Url::fromRoute('entity.token_limit.collection')->toString(),
       302,
