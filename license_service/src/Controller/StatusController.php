@@ -90,7 +90,7 @@ class StatusController extends ControllerBase {
       $seatText = $this->t('Unlimited (no cap configured in license)');
     }
     else {
-      $seatText = $this->t('@used / @cap premium seats used', [
+      $seatText = $this->t('@used / @cap authorized seats used', [
         '@used' => $seats['used'],
         '@cap'  => $seats['cap'],
       ]);
