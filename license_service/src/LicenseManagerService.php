@@ -224,7 +224,7 @@ class LicenseManagerService {
    * Invalidates the cached license status, forcing a fresh check on next access.
    */
   public function invalidateCache(): void {
-    $this->cache->invalidateTags(['license_service']);
+    $this->cacheTagsInvalidator->invalidateTags(['license_service']);
   }
 
   // --------------------------------------------------------------------------
