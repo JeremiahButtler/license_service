@@ -1,0 +1,97 @@
+# Author: Jeremiah Buttler
+services:
+  # Reads token counts defensively from AI module output objects.
+  license_service_token_counter.extractor:
+    class: Drupal\license_service_token_counter\Service\TokenUsageExtractor
+
+  # Persists usage rows and enforces retention.
+  license_service_token_counter.recorder:
+    class: Drupal\license_service_token_counter\Service\UsageRecorder
+    arguments:
+      - '@database'
+      - '@uuid'
+      - '@config.factory'
+      - '@datetime.time'
+
+  # Resolves the site's license state for this module.
+  # Injects license_service.manager (LicenseFeatureProvider) directly rather
+  # than probing the container defensively. This is a deliberate concrete
+  # dependency: license_service is declared a hard .info.yml dependency, so
+  # Drupal guarantees the service is present. An extracted copy without
+  # license_service must reproduce the full LicenseFeatureProviderInterface
+  # surface backed by a real Ed25519-verified token.
+  license_service_token_counter.license_bridge:
+    class: Drupal\license_service_token_counter\License\LicenseBridge
+    arguments:
+      - '@license_service.manager'
+      - '@logger.channel.license_service_token_counter'
+
+  # Default cost calculator. The engine submodule overrides this service class
+  # (see LicenseServiceTokenCounterEngineServiceProvider) with the licensed implementation.
+  license_service_token_counter.cost:
+    class: Drupal\license_service_token_counter\Cost\NullCostCalculator
+
+  # Blocks AI calls before they happen when the user is over a token limit.
+  # Subscribes to PreGenerateResponseEvent only if that class exists (degrades
+  # safely on older drupal/ai versions that lack the pre-event).
+  license_service_token_counter.enforcement_subscriber:
+    class: Drupal\license_service_token_counter\EventSubscriber\EnforcementSubscriber
+    arguments:
+      - '@license_service_token_counter.limit_evaluator'
+      - '@current_user'
+      - '@config.factory'
+      - '@messenger'
+      - '@logger.channel.license_service_token_counter'
+    tags:
+      - { name: event_subscriber }
+
+  # Captures usage from AI module response events. Capture is not gated by
+  # licensing — all AI calls are recorded regardless of license state.
+  license_service_token_counter.subscriber:
+    class: Drupal\license_service_token_counter\EventSubscriber\UsageEventSubscriber
+    arguments:
+      - '@license_service_token_counter.extractor'
+      - '@license_service_token_counter.recorder'
+      - '@license_service_token_counter.cost'
+      - '@config.factory'
+      - '@current_user'
+      - '@current_route_match'
+      - '@logger.channel.license_service_token_counter'
+    tags:
+      - { name: event_subscriber }
+
+  # Aggregates token usage; the single shared query path for blocks, Views
+  # field handlers, the real-time endpoint, and the limit evaluator.
+  # Uses license_service.period_manager for period windowing — a deliberate
+  # concrete dependency on license_service's canonical period implementation.
+  license_service_token_counter.usage_aggregator:
+    class: Drupal\license_service_token_counter\Service\UsageAggregator
+    public: true
+    arguments:
+      - '@database'
+      - '@license_service.period_manager'
+
+  # Evaluates token limit rules against an account's current usage.
+  # Requires an active site license — enforcement is a licensed capability.
+  license_service_token_counter.limit_evaluator:
+    class: Drupal\license_service_token_counter\Service\LimitEvaluator
+    arguments:
+      - '@entity_type.manager'
+      - '@license_service_token_counter.usage_aggregator'
+      - '@license_service_token_counter.license_bridge'
+
+  # Currency helper — provides currency options and the default currency for the
+  # display currency select on the settings form. Commerce-aware: reads
+  # commerce_currency entities and the default store currency when available;
+  # falls back to a static ISO list otherwise.
+  license_service_token_counter.currency_helper:
+    class: Drupal\license_service_token_counter\Service\CurrencyHelper
+    arguments:
+      - '@module_handler'
+      - '@entity_type.manager'
+      - '@config.factory'
+
+  # Dedicated log channel.
+  logger.channel.license_service_token_counter:
+    parent: logger.channel_base
+    arguments: ['license_service_token_counter']

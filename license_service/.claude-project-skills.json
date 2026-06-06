@@ -1,0 +1,32 @@
+{
+  "applied_skills": {
+    "feature-list": {
+      "fingerprint": "sha256:9b68f7a637693dab23165f15d46ac442a3fc9a7a704fb36c141aefc64ea61f7e",
+      "applied": "2026-05-31"
+    },
+    "project-credits": {
+      "fingerprint": "sha256:fa6be7b69fe0e6ad5bb2e18a39e0c2e1b159d2b8863ed3a2eab4ebb82d9974a0",
+      "applied": "2026-05-31"
+    },
+    "project-tracking": {
+      "fingerprint": "sha256:ffbe0552607ebd690b713dd5fe38975c268f8e51b7eaa1ef4d5c1fb3d3a72657",
+      "applied": "2026-05-31"
+    },
+    "ai-providers": {
+      "fingerprint": "sha256:f4f9ecd83a34713a6cc55940ccc7999397f6ae541c0c6a7ed0972d36f62238bd",
+      "applied": "2026-05-31"
+    },
+    "file-structure": {
+      "fingerprint": "sha256:9698d6360dd1e4a4d86fe11ce996a0dfa12bc3bcd1d065e065bbf2970a8d4ba7",
+      "applied": "2026-05-31"
+    },
+    "program-defaults": {
+      "fingerprint": "sha256:a04bdf0ab6dfa79f530a59080284676e150560f8f27e766712b62585c67d6cb3",
+      "applied": "2026-05-31"
+    },
+    "terms-and-conditions": {
+      "fingerprint": "sha256:d9b437af78549d2461c9cb32496c4ba5e4c893fc2bf0e053c02736aa7a2bee31",
+      "applied": "2026-05-31"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+﻿/**
+ * @file
+ * Styles for the License Service Token Counter features page.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+.license-service-token-counter-features-search {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 0 1.5rem;
+  padding: .45rem .75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.license-service-token-counter-features-search:focus {
+  outline: 2px solid #0071b8;
+  outline-offset: 1px;
+  border-color: #0071b8;
+}
+
+.license-service-token-counter-features-section {
+  margin: 0 0 1.5rem;
+}
+
+.license-service-token-counter-features-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 .5rem;
+  padding-bottom: .25rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.license-service-token-counter-feature-item {
+  padding: .25rem 0;
+  line-height: 1.5;
+}
+
+.license-service-token-counter-feature-name {
+  font-weight: 600;
+}
+
+.license-service-token-counter-feature-desc {
+  color: #444;
+}
+
+.license-service-token-counter-features-copyright {
+  margin-top: 1.5rem;
+  font-size: .7rem;
+  font-weight: normal;
+  color: #999;
+}

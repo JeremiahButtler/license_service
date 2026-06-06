@@ -1,0 +1,86 @@
+﻿# Author: Jeremiah Buttler
+
+# Legacy config object — kept so sites with this entry in config/sync do not
+# fail on config:import. The PricingResolver no longer reads from this object;
+# pricing is now managed via pricing_table config entities below.
+license_service_token_counter_engine.pricing:
+  type: config_object
+  label: 'License Service Token Counter cost-engine pricing (legacy)'
+  mapping:
+    currency:
+      type: string
+      label: 'Currency code used for cost display'
+    unit:
+      type: integer
+      label: 'Number of tokens per priced unit (default 1,000,000)'
+    pricing:
+      type: sequence
+      label: 'Pricing table, keyed by provider id'
+      sequence:
+        type: sequence
+        label: 'Models for a provider, keyed by model id'
+        sequence:
+          type: mapping
+          label: 'Per-unit rates for a model'
+          mapping:
+            input:
+              type: float
+              label: 'Input (prompt) token rate'
+            output:
+              type: float
+              label: 'Output (completion) token rate'
+            cached:
+              type: float
+              label: 'Cached input token rate (falls back to input)'
+            reasoning:
+              type: float
+              label: 'Reasoning token rate (falls back to output)'
+
+# Config entity schema for pricing_table.
+# Requires Drupal 10.2+ for nullable: true support on cached/reasoning floats.
+license_service_token_counter_engine.pricing_table.*:
+  type: config_entity
+  label: 'License Service Token Counter pricing table'
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Label'
+    status:
+      type: boolean
+      label: 'Enabled'
+    weight:
+      type: integer
+      label: 'Sort weight'
+    provider:
+      type: string
+      label: 'Provider ID (* = wildcard fallback for any provider)'
+    unit:
+      type: integer
+      label: 'Number of tokens per priced unit (e.g. 1000000)'
+    rates:
+      type: sequence
+      label: 'Rate rows'
+      sequence:
+        type: mapping
+        label: 'Rate row'
+        mapping:
+          model:
+            type: string
+            label: 'Model identifier (* = wildcard fallback for any model)'
+          input:
+            type: float
+            label: 'Input (prompt) token rate per unit'
+          output:
+            type: float
+            label: 'Output (completion) token rate per unit'
+          cached:
+            type: float
+            nullable: true
+            label: 'Cached input token rate (optional; falls back to input rate)'
+          reasoning:
+            type: float
+            nullable: true
+            label: 'Reasoning token rate (optional; falls back to output rate)'

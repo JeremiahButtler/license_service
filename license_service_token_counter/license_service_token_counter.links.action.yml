@@ -1,0 +1,6 @@
+﻿# Author: Jeremiah Buttler
+license_service_token_counter.token_limit.add:
+  route_name: entity.token_limit.add_form
+  title: 'Add token limit'
+  appears_on:
+    - entity.token_limit.collection

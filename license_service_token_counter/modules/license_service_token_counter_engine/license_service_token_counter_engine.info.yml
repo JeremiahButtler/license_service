@@ -1,0 +1,9 @@
+﻿# Author: Jeremiah Buttler
+name: 'License Service Token Counter: Cost Engine'
+type: module
+description: 'Licensed cost-estimation engine for License Service Token Counter. Computes estimated cost from token usage and its own local, admin-editable pricing table. Requires an active site license to unlock; inert without one.'
+package: 'AI'
+core_version_requirement: '^10 || ^11'
+dependencies:
+  - 'license_service_token_counter:license_service_token_counter'
+  - 'license_service:license_service'

@@ -1,0 +1,15 @@
+# Author: Jeremiah Buttler
+capture_enabled: true
+captured_operations:
+  - chat
+  - chat_with_tools
+  - embeddings
+  - moderation
+  - text_to_image
+  - text_to_speech
+  - speech_to_text
+  - translate_text
+record_anonymous: true
+retention_days: 0
+display_currency: 'USD'
+cost_display_precision: 4

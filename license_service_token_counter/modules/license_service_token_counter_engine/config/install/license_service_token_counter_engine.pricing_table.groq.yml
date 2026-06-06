@@ -1,0 +1,28 @@
+# Author: Jeremiah Buttler
+# Default pricing for the Groq drupal/ai provider plugin.
+# Rates are per 1,000,000 tokens (unit: 1000000), USD.
+# Verify against https://groq.com/pricing before billing use.
+langcode: en
+status: true
+dependencies: {}
+id: groq
+label: 'Groq pricing'
+provider: groq
+unit: 1000000
+weight: 0
+rates:
+  - model: llama-3.3-70b-versatile
+    input: 0.59
+    output: 0.79
+  - model: llama-3.1-8b-instant
+    input: 0.05
+    output: 0.08
+  - model: gemma2-9b-it
+    input: 0.2
+    output: 0.2
+  - model: mixtral-8x7b-32768
+    input: 0.24
+    output: 0.24
+  - model: '*'
+    input: 0.59
+    output: 0.79

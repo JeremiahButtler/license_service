@@ -1,0 +1,139 @@
+﻿/* Author: Jeremiah Buttler */
+
+.license-service-token-counter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.license-service-token-counter-card {
+  flex: 1 1 12rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d3d4d9;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.license-service-token-counter-card__label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #55565b;
+}
+
+.license-service-token-counter-card__value {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1b1b1d;
+}
+
+.license-service-token-counter-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.license-service-token-counter-badge--locked {
+  background: #fcf0e6;
+  color: #a23b00;
+}
+
+.license-service-token-counter-badge--computed {
+  background: #e6f4ea;
+  color: #1a6b42;
+}
+
+.license-service-token-counter-badge--unpriced {
+  background: #eceef2;
+  color: #55565b;
+}
+
+.license-service-token-counter-warning {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #e09600;
+  background: #fdf6e3;
+}
+
+/* Estimated cost line inside usage blocks. Author: Jeremiah Buttler. */
+.atc-cost-line {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 0.9rem;
+  color: #1a6b42;
+  font-weight: 600;
+}
+
+.atc-cost-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.atc-cost-currency {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #55565b;
+}
+
+.atc-cost-label {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #55565b;
+}
+
+/* Breakdown table: per-provider, per-model token counts inside usage blocks.
+ * Author: Jeremiah Buttler. */
+.atc-breakdown {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #1b1b1d;
+}
+
+.atc-breakdown th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #55565b;
+  border-bottom: 2px solid #d3d4d9;
+  padding: 0.2rem 0.4rem;
+}
+
+.atc-breakdown td {
+  padding: 0.18rem 0.4rem;
+  vertical-align: top;
+}
+
+.atc-breakdown tr.atc-breakdown-provider td {
+  font-weight: 600;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e8e8e8;
+}
+
+.atc-breakdown tr.atc-breakdown-provider:first-child td {
+  border-top: none;
+  padding-top: 0.2rem;
+}
+
+.atc-breakdown-model-name {
+  color: #55565b;
+  padding-left: 1.25rem;
+}
+
+.atc-breakdown tr.atc-breakdown-empty td {
+  color: #55565b;
+  font-style: italic;
+}
+
+.atc-breakdown td:last-child,
+.atc-breakdown th:last-child {
+  text-align: right;
+  white-space: nowrap;
+}

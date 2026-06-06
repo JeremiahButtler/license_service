@@ -1,0 +1,5 @@
+license_service_token_limits.settings.tab:
+  route_name: license_service_token_limits.settings
+  title: 'Token Limits'
+  base_route: license_service.settings
+  weight: 15

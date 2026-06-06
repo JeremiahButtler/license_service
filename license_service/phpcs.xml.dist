@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<ruleset name="license_service">
+  <description>PHP_CodeSniffer rules for the license_service Drupal module.</description>
+
+  <!-- Scan these paths by default. -->
+  <file>src</file>
+  <file>tests</file>
+  <file>license_service.module</file>
+  <file>license_service.install</file>
+
+  <!-- Show sniff codes in output. -->
+  <arg value="sp"/>
+  <arg name="colors"/>
+  <arg name="extensions" value="php,module,install,inc"/>
+
+  <!-- Drupal coding standard (requires drupal/coder). -->
+  <rule ref="Drupal"/>
+  <rule ref="DrupalPractice"/>
+
+  <!-- Allow long lines in tests (assertion chains can be verbose). -->
+  <rule ref="Drupal.Files.LineLength">
+    <exclude-pattern>tests/*</exclude-pattern>
+  </rule>
+
+  <!-- Security: flag risky functions. -->
+  <rule ref="Generic.PHP.ForbiddenFunctions">
+    <properties>
+      <property name="forbiddenFunctions" type="array">
+        <element key="eval" value="null"/>
+        <element key="exec" value="null"/>
+        <element key="shell_exec" value="null"/>
+        <element key="passthru" value="null"/>
+        <element key="system" value="null"/>
+        <element key="popen" value="null"/>
+        <element key="proc_open" value="null"/>
+        <element key="var_dump" value="null"/>
+        <element key="print_r" value="null"/>
+      </property>
+    </properties>
+  </rule>
+
+</ruleset>

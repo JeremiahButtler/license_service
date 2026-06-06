@@ -1,0 +1,57 @@
+﻿# Author: Jeremiah Buttler
+
+# Config entity: one quota rule (amount + period + scope).
+license_service_token_counter.token_limit.*:
+  type: config_entity
+  label: 'License Service Token Counter token limit'
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Label'
+    status:
+      type: boolean
+      label: 'Enabled'
+    weight:
+      type: integer
+      label: 'Display weight'
+    scope_type:
+      type: string
+      label: 'Scope type (role / all_users / site_total)'
+    role_id:
+      type: string
+      label: 'Role machine name (only used when scope_type = role)'
+    amount:
+      type: integer
+      label: 'Token limit amount'
+    period:
+      type: string
+      label: 'Period key (day / week / month / year / lifetime)'
+
+license_service_token_counter.settings:
+  type: config_object
+  label: 'License Service Token Counter settings'
+  mapping:
+    capture_enabled:
+      type: boolean
+      label: 'Capture AI token usage'
+    captured_operations:
+      type: sequence
+      label: 'Operation types to capture'
+      sequence:
+        type: string
+        label: 'Operation type'
+    retention_days:
+      type: integer
+      label: 'Days to retain usage records (0 = keep forever)'
+    display_currency:
+      type: string
+      label: 'Currency code used for cost display'
+    record_anonymous:
+      type: boolean
+      label: 'Whether to record usage for anonymous (uid 0) visitors'
+    cost_display_precision:
+      type: integer
+      label: 'Decimal places shown for estimated cost figures'

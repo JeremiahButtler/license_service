@@ -1,0 +1,9 @@
+administer license gate:
+  title: 'Administer License Service'
+  description: 'Configure the license key, role levels, and per-level content access rules.'
+  restrict access: true
+
+bypass license gate:
+  title: 'Bypass License Service'
+  description: 'Bypass all license-level content restrictions; always granted full access regardless of license status.'
+  restrict access: true

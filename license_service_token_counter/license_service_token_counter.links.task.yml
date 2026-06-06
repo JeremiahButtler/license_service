@@ -1,0 +1,27 @@
+﻿# Author: Jeremiah Buttler
+license_service_token_counter.report:
+  title: 'Usage'
+  route_name: license_service_token_counter.report
+  base_route: license_service_token_counter.report
+  weight: 0
+
+license_service_token_counter.report.by_user:
+  title: 'By user'
+  route_name: view.license_service_token_usage_by_user.page_1
+  base_route: license_service_token_counter.report
+  weight: 5
+
+license_service_token_counter.settings.tab:
+  title: 'Settings'
+  route_name: license_service_token_counter.settings
+  base_route: license_service_token_counter.settings
+
+license_service_token_counter.features.tab:
+  title: 'Features'
+  route_name: license_service_token_counter.features
+  base_route: license_service_token_counter.settings
+
+license_service_token_counter.limits.tab:
+  title: 'Limits'
+  route_name: entity.token_limit.collection
+  base_route: license_service_token_counter.settings

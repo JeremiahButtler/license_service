@@ -1,0 +1,9 @@
+name: 'License Service'
+type: module
+description: 'Connects a Drupal site to the License Verification Server and controls content access by license level and user role.'
+core_version_requirement: ^10 || ^11
+package: Security
+configure: license_service.settings
+dependencies:
+  - drupal:node
+  - drupal:user

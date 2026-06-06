@@ -1,0 +1,8 @@
+name: 'License Service: Token Limits'
+type: module
+description: 'Per-license-level AI token quotas. Blocks AI calls when a user exceeds their license level token allowance.'
+core_version_requirement: ^10 || ^11
+package: Security
+dependencies:
+  - license_service:license_service
+  - license_service_token_counter:license_service_token_counter

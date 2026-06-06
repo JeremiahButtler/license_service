@@ -1,0 +1,42 @@
+license_service.admin:
+  title: 'License Service'
+  description: 'Manage the site license, role levels, and content access rules.'
+  route_name: license_service.settings
+  parent: system.admin_config_security
+  weight: 10
+
+license_service.admin_settings:
+  title: 'Settings'
+  route_name: license_service.settings
+  parent: license_service.admin
+  weight: -10
+
+license_service.admin_role_levels:
+  title: 'Role Levels'
+  route_name: license_service.role_levels
+  parent: license_service.admin
+  weight: 0
+
+license_service.admin_content_rules:
+  title: 'Content Rules'
+  route_name: license_service.content_rules
+  parent: license_service.admin
+  weight: 10
+
+license_service.admin_status:
+  title: 'License Status'
+  route_name: license_service.status
+  parent: license_service.admin
+  weight: 20
+
+license_service.admin_features:
+  title: 'Features'
+  route_name: license_service.features
+  parent: license_service.admin
+  weight: 30
+
+license_service.admin_terms:
+  title: 'Terms & Conditions'
+  route_name: license_service.terms
+  parent: license_service.admin
+  weight: 40

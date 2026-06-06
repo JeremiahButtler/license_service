@@ -1,0 +1,87 @@
+services:
+  license_service.key_provider:
+    class: Drupal\license_service\Key\LicenseKeyProvider
+    arguments:
+      - '@config.factory'
+      - '@state'
+      # Key module integration handled at runtime via \Drupal::hasService('key.repository')
+
+  license_service.license_client:
+    class: Drupal\license_service\LicenseClient
+    arguments:
+      - '@config.factory'
+      - '@state'
+      - '@http_client'
+      - '@logger.factory'
+      - '@license_service.key_provider'
+
+  license_service.license_manager:
+    class: Drupal\license_service\LicenseManagerService
+    arguments:
+      - '@license_service.license_client'
+      - '@config.factory'
+      - '@cache.default'
+
+  # Public cross-module entitlement API consumed by licensed add-on modules
+  # (e.g. AI Token Counter). The service id 'license_service.manager' is the first
+  # id those modules probe; the method surface duck-types their license contract.
+  license_service.manager:
+    class: Drupal\license_service\LicenseFeatureProvider
+    arguments:
+      - '@license_service.license_manager'
+
+  # Canonical period-bucketing service for the License Service ecosystem.
+  # Provides getCurrentPeriodKey() (UTC string keys) and getStart() (site-tz
+  # timestamps) for all sub-modules. Concrete class — no interface — to make
+  # the seam hard to extract without license_service present.
+  license_service.period_manager:
+    class: Drupal\license_service\Period\PeriodManager
+    arguments:
+      - '@datetime.time'
+      - '@config.factory'
+
+  license_service.entitlement_resolver:
+    class: Drupal\license_service\Entitlements\EntitlementResolver
+    arguments:
+      - '@license_service.license_manager'
+      - '@config.factory'
+      - '@license_service.period_manager'
+
+  license_service.content_access_checker:
+    class: Drupal\license_service\Access\ContentAccessChecker
+    arguments:
+      - '@license_service.license_manager'
+      - '@license_service.entitlement_resolver'
+      - '@database'
+      - '@current_user'
+      - '@entity_type.manager'
+
+  # Cache bin for per-user LVS grant decisions (granted/rejected + TTL).
+  # Entries are keyed "lvs_grant:{uid}:{kind}" and tagged "lvs_grant:{uid}".
+  cache.lvs_user_grants:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin }
+    factory: cache_factory:get
+    arguments: [lvs_user_grants]
+
+  license_service.seat_cap:
+    class: Drupal\license_service\SeatCapService
+    arguments:
+      - '@license_service.license_manager'
+      - '@license_service.license_client'
+      - '@config.factory'
+      - '@entity_type.manager'
+      - '@lock'
+      - '@cache.lvs_user_grants'
+
+  license_service.enforcement_subscriber:
+    class: Drupal\license_service\EventSubscriber\EnforcementSubscriber
+    arguments:
+      - '@license_service.license_manager'
+      - '@config.factory'
+      - '@current_user'
+      - '@messenger'
+      - '@current_route_match'
+    tags:
+      - { name: event_subscriber }

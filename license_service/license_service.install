@@ -1,0 +1,373 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for License Service.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_schema().
+ *
+ * Creates tables for metered view tracking and create/edit quota tracking.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_schema(): array {
+  $schema = [];
+
+  $schema['license_service_meter'] = [
+    'description' => 'Tracks metered premium-content views per user per period.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The Drupal user ID.',
+      ],
+      'content_type' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Content type machine name.',
+      ],
+      'period' => [
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Period identifier, e.g. "2026-05" for monthly.',
+      ],
+      'view_count' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Metered views consumed in this period.',
+      ],
+      'updated' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp of last update.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'user_type_period' => ['uid', 'content_type', 'period'],
+    ],
+    'indexes' => [
+      'uid' => ['uid'],
+    ],
+  ];
+
+  $schema['license_service_quota'] = [
+    'description' => 'Tracks create/edit quota usage per user per content type.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The Drupal user ID.',
+      ],
+      'content_type' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Content type machine name.',
+      ],
+      'operation' => [
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The gated operation: "create" or "edit".',
+      ],
+      'count' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Number of operations performed.',
+      ],
+      'updated' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp of last update.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'user_type_op' => ['uid', 'content_type', 'operation'],
+    ],
+    'indexes' => [
+      'uid' => ['uid'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_requirements().
+ *
+ * Checks for the sodium extension (install-time hard requirement) and
+ * reports license status on the Status Report page (runtime).
+ * Author: Jeremiah Buttler.
+ */
+function license_service_requirements(string $phase): array {
+  $requirements = [];
+
+  // Sodium is required for offline Ed25519 token verification.
+  if (!extension_loaded('sodium')) {
+    $requirements['license_service_sodium'] = [
+      'title' => t('License Service: PHP sodium extension'),
+      'value' => t('Missing'),
+      'description' => t('The PHP <a href="https://www.php.net/manual/en/book.sodium.php">sodium extension</a> is required by License Service for offline license token verification. Enable it in your PHP configuration.'),
+      'severity' => REQUIREMENT_ERROR,
+    ];
+    // Do not attempt to check the license if sodium is absent.
+    if ($phase === 'runtime') {
+      return $requirements;
+    }
+  }
+
+  if ($phase === 'runtime') {
+    try {
+      /** @var \Drupal\license_service\LicenseManagerService $manager */
+      $manager = \Drupal::service('license_service.license_manager');
+      $status = $manager->getStatus();
+
+      if (empty($status['licensed'])) {
+        $requirements['license_service_status'] = [
+          'title' => t('License Service'),
+          'value' => t('Unlicensed'),
+          'description' => t('No active license. <a href=":url">Configure your license key.</a>', [
+            ':url' => '/admin/config/license-service/settings',
+          ]),
+          'severity' => REQUIREMENT_ERROR,
+        ];
+      }
+      elseif (!empty($status['warnings'])) {
+        $escapedWarnings = array_map(
+          static fn(string $w) => htmlspecialchars($w, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+          $status['warnings'],
+        );
+        $requirements['license_service_status'] = [
+          'title' => t('License Service'),
+          'value' => t('Licensed (warning)'),
+          'description' => implode(' ', $escapedWarnings),
+          'severity' => REQUIREMENT_WARNING,
+        ];
+      }
+      else {
+        $requirements['license_service_status'] = [
+          'title' => t('License Service'),
+          'value' => t('Licensed — @tier', ['@tier' => $status['tier'] ?? 'unknown']),
+          'severity' => REQUIREMENT_OK,
+        ];
+      }
+    }
+    catch (\Throwable) {
+      $requirements['license_service_status'] = [
+        'title' => t('License Service'),
+        'value' => t('Status unavailable'),
+        'severity' => REQUIREMENT_WARNING,
+      ];
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_install().
+ *
+ * On first install, best-effort migrates any data left behind by the module's
+ * former machine name (`license_gate`) into the current `license_service.*`
+ * names: configuration objects, state entries, and the metered-view / quota
+ * tables. This makes the `license_gate` → `license_service` rename transparent
+ * for sites that simply swap the module code in place. It is a no-op on a clean
+ * install (no legacy data present) and never fails the install — any migration
+ * error is logged and swallowed so the module still installs.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_install(): void {
+  try {
+    _license_service_migrate_legacy_license_gate();
+  }
+  catch (\Throwable $e) {
+    \Drupal::logger('license_service')->warning(
+      'Legacy license_gate data migration skipped: @msg',
+      ['@msg' => $e->getMessage()],
+    );
+  }
+
+  \Drupal::messenger()->addStatus(t(
+    'License Service installed. <a href=":url">Activate your license</a> to enable content access control.',
+    [':url' => '/admin/config/license-service/settings']
+  ));
+}
+
+/**
+ * Migrates data from the legacy `license_gate` machine name to `license_service`.
+ *
+ * Mirrors config objects, state keys, and database table rows from the old
+ * names to the new ones, then removes the legacy copies. Each piece is guarded
+ * so a partially-present legacy install still migrates what it can. Existing
+ * `license_service.*` data is never overwritten (a real fresh install wins).
+ *
+ * Author: Jeremiah Buttler.
+ */
+function _license_service_migrate_legacy_license_gate(): void {
+  $migrated = FALSE;
+
+  // 1. Configuration objects: license_gate.<x> -> license_service.<x>.
+  $config_factory = \Drupal::configFactory();
+  foreach (['settings', 'role_levels', 'content_rules'] as $suffix) {
+    $old_name = 'license_gate.' . $suffix;
+    $new_name = 'license_service.' . $suffix;
+    $old_config = $config_factory->get($old_name);
+    if ($old_config->isNew()) {
+      // No legacy config object of this name exists.
+      continue;
+    }
+    $data = $old_config->getRawData();
+    if ($data === []) {
+      continue;
+    }
+    $new_config = $config_factory->getEditable($new_name);
+    // Do not clobber data created by a genuine fresh install.
+    if ($new_config->getRawData() === []) {
+      $new_config->setData($data)->save();
+      $migrated = TRUE;
+    }
+    // Remove the orphaned legacy config object either way.
+    $config_factory->getEditable($old_name)->delete();
+  }
+
+  // 2. State entries: license_gate.<x> -> license_service.<x>.
+  $state = \Drupal::state();
+  $state_keys = [
+    'machine_id',
+    'cached_token',
+    'license_summary',
+    'last_check',
+    'license_key',
+    'key_set',
+    'offline_since',
+    'public_key',
+  ];
+  $old_state_keys = [];
+  foreach ($state_keys as $key) {
+    $old_key = 'license_gate.' . $key;
+    $new_key = 'license_service.' . $key;
+    $value = $state->get($old_key);
+    if ($value === NULL) {
+      continue;
+    }
+    $old_state_keys[] = $old_key;
+    // Only set if the new key has not already been populated.
+    if ($state->get($new_key) === NULL) {
+      $state->set($new_key, $value);
+      $migrated = TRUE;
+    }
+  }
+  if ($old_state_keys !== []) {
+    $state->deleteMultiple($old_state_keys);
+  }
+
+  // 3. Database tables: license_gate_meter/_quota -> license_service_*.
+  // The legacy and current schemas are identical, so copy every data column
+  // (omitting the serial `id`, which the new table regenerates) and drop the
+  // legacy table once its rows are transferred.
+  $database = \Drupal::database();
+  $schema = $database->schema();
+  $table_columns = [
+    'license_gate_meter' => [
+      'new' => 'license_service_meter',
+      'columns' => ['uid', 'content_type', 'period', 'view_count', 'updated'],
+    ],
+    'license_gate_quota' => [
+      'new' => 'license_service_quota',
+      'columns' => ['uid', 'content_type', 'operation', 'count', 'updated'],
+    ],
+  ];
+  foreach ($table_columns as $old_table => $info) {
+    if (!$schema->tableExists($old_table) || !$schema->tableExists($info['new'])) {
+      continue;
+    }
+    $rows = $database->select($old_table, 't')
+      ->fields('t', $info['columns'])
+      ->execute()
+      ->fetchAll(\PDO::FETCH_ASSOC);
+    if ($rows) {
+      $insert = $database->insert($info['new'])->fields($info['columns']);
+      foreach ($rows as $row) {
+        $insert->values($row);
+      }
+      $insert->execute();
+      $migrated = TRUE;
+    }
+    // Drop the legacy table now that its rows have been carried over.
+    $schema->dropTable($old_table);
+  }
+
+  if ($migrated) {
+    \Drupal::logger('license_service')->notice(
+      'Migrated existing license_gate data (config, state, and metering tables) to license_service.',
+    );
+    \Drupal::messenger()->addStatus(t(
+      'Existing data from the former License Gate module was migrated to License Service.'
+    ));
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Removes all config, cached license data, and secrets.
+ * No sensitive data is left behind. Author: Jeremiah Buttler.
+ */
+function license_service_uninstall(): void {
+  // Remove all config objects.
+  foreach (['license_service.settings', 'license_service.role_levels', 'license_service.content_rules'] as $name) {
+    \Drupal::configFactory()->getEditable($name)->delete();
+  }
+
+  // Remove state entries — these may hold the cached token and the key
+  // (when using the state/config fallback provider).
+  \Drupal::state()->deleteMultiple([
+    'license_service.machine_id',
+    'license_service.cached_token',
+    'license_service.license_summary',
+    'license_service.last_check',
+    'license_service.license_key',
+    'license_service.key_set',
+    'license_service.offline_since',
+    'license_service.public_key',
+  ]);
+
+  // Invalidate any cached access decisions.
+  \Drupal::cache()->invalidateTags(['license_service']);
+}

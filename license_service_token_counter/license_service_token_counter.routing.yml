@@ -1,0 +1,39 @@
+﻿# Author: Jeremiah Buttler
+license_service_token_counter.report:
+  path: '/admin/reports/ai-token-usage'
+  defaults:
+    _controller: '\Drupal\license_service_token_counter\Controller\UsageReportController::report'
+    _title: 'AI token usage'
+  requirements:
+    _custom_access: '\Drupal\license_service_token_counter\Controller\UsageReportController::access'
+  options:
+    _admin_route: true
+
+license_service_token_counter.settings:
+  path: '/admin/config/ai/token-counter'
+  defaults:
+    _form: '\Drupal\license_service_token_counter\Form\SettingsForm'
+    _title: 'License Service Token Counter settings'
+  requirements:
+    _permission: 'administer ai token counter'
+  options:
+    _admin_route: true
+
+license_service_token_counter.features:
+  path: '/admin/config/ai/token-counter/features'
+  defaults:
+    _controller: '\Drupal\license_service_token_counter\Controller\FeaturesController::features'
+    _title: 'License Service Token Counter features'
+  requirements:
+    _permission: 'administer ai token counter'
+  options:
+    _admin_route: true
+
+# Real-time JSON endpoint for block polling. Access enforced in the controller.
+license_service_token_counter.usage_api:
+  path: '/api/license-service-token-counter/usage'
+  defaults:
+    _controller: '\Drupal\license_service_token_counter\Controller\UsageApiController::usage'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+  methods: [GET]

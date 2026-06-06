@@ -1,0 +1,35 @@
+license_service.settings.tab:
+  route_name: license_service.settings
+  title: 'Settings'
+  base_route: license_service.settings
+  weight: -10
+
+license_service.role_levels.tab:
+  route_name: license_service.role_levels
+  title: 'Role Levels'
+  base_route: license_service.settings
+  weight: 0
+
+license_service.content_rules.tab:
+  route_name: license_service.content_rules
+  title: 'Content Rules'
+  base_route: license_service.settings
+  weight: 10
+
+license_service.status.tab:
+  route_name: license_service.status
+  title: 'Status'
+  base_route: license_service.settings
+  weight: 20
+
+license_service.features.tab:
+  route_name: license_service.features
+  title: 'Features'
+  base_route: license_service.settings
+  weight: 30
+
+license_service.terms.tab:
+  route_name: license_service.terms
+  title: 'Terms'
+  base_route: license_service.settings
+  weight: 40

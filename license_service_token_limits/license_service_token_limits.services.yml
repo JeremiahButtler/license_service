@@ -1,0 +1,27 @@
+# Author: Jeremiah Buttler
+services:
+  # Evaluates whether an account has exceeded its per-license-level token quota.
+  license_service_token_limits.level_quota_evaluator:
+    class: Drupal\license_service_token_limits\Service\LevelQuotaEvaluator
+    arguments:
+      - '@license_service.manager'
+      - '@license_service_token_counter.usage_aggregator'
+      - '@config.factory'
+
+  # Blocks AI calls (PreGenerateResponseEvent) when the user is over their
+  # license-level quota. Priority 90: fires after the token counter's per-rule
+  # check at priority 100.
+  license_service_token_limits.quota_enforcement_subscriber:
+    class: Drupal\license_service_token_limits\EventSubscriber\QuotaEnforcementSubscriber
+    arguments:
+      - '@license_service_token_limits.level_quota_evaluator'
+      - '@current_user'
+      - '@messenger'
+      - '@logger.channel.license_service_token_limits'
+    tags:
+      - { name: event_subscriber }
+
+  # Dedicated log channel.
+  logger.channel.license_service_token_limits:
+    parent: logger.channel_base
+    arguments: ['license_service_token_limits']

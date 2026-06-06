@@ -1,0 +1,32 @@
+﻿# Author: Jeremiah Buttler
+report:
+  version: 1.0.x
+  css:
+    theme:
+      css/license-service-token-counter.css: {}
+
+features:
+  version: 1.0.x
+  css:
+    theme:
+      css/license-service-token-counter-features.css: {}
+  js:
+    js/license-service-token-counter-features.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
+# Real-time block polling + per-provider breakdown table.
+# JS reads drupalSettings for the endpoint URL + interval; CSS styles the
+# breakdown table rendered in the usage-block template.
+usage:
+  version: 1.0.x
+  css:
+    theme:
+      css/license-service-token-counter.css: {}
+  js:
+    js/license-service-token-counter-usage.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - core/drupalSettings

@@ -1,0 +1,5 @@
+license_service_token_limits.admin:
+  title: 'Token Limits'
+  route_name: license_service_token_limits.settings
+  parent: license_service.admin
+  weight: 15

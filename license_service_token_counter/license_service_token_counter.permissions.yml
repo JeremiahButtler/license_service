@@ -1,0 +1,24 @@
+﻿# Author: Jeremiah Buttler
+'administer ai token counter':
+  title: 'Administer License Service Token Counter'
+  description: 'Configure capture settings and retention.'
+  restrict access: true
+
+'view ai token usage reports':
+  title: 'View AI token usage reports'
+  description: 'View aggregate AI token usage and estimated cost for all users.'
+  restrict access: true
+
+'view own ai token usage':
+  title: 'View own AI token usage'
+  description: 'View AI token usage and estimated cost for your own interactions only.'
+
+'administer ai token usage limits':
+  title: 'Administer AI token usage limits'
+  description: 'Create, edit and delete token quota rules.'
+  restrict access: true
+
+'bypass ai token usage limits':
+  title: 'Bypass AI token usage limits'
+  description: 'Exempts users from all token quota rules (e.g. for site administrators).'
+  restrict access: true

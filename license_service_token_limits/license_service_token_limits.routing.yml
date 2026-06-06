@@ -1,0 +1,7 @@
+license_service_token_limits.settings:
+  path: '/admin/config/license-service/token-limits'
+  defaults:
+    _form: '\Drupal\license_service_token_limits\Form\LevelQuotaForm'
+    _title: 'Token Limits'
+  requirements:
+    _permission: 'administer license gate'

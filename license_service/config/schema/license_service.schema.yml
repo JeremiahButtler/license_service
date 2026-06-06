@@ -1,0 +1,87 @@
+license_service.settings:
+  type: config_object
+  label: 'License Service settings'
+  mapping:
+    server_url:
+      type: string
+      label: 'License Verification Server URL'
+    key_provider:
+      type: string
+      label: 'Key provider type (key_module, settings_php, or config)'
+    key_id:
+      type: string
+      label: 'Key module key ID (when key_provider is key_module)'
+    offline_grace_hours:
+      type: integer
+      label: 'Hours the module keeps running when the server is unreachable'
+    expiry_warning_days:
+      type: integer
+      label: 'Days before expiry to start showing warnings'
+    enforcement_enabled:
+      type: boolean
+      label: 'Enable site-wide gate when the license is missing or expired'
+    enforcement_mode:
+      type: string
+      label: 'warn_only or enforce'
+
+license_service.role_levels:
+  type: config_object
+  label: 'License Service role level mappings'
+  mapping:
+    role_levels:
+      type: sequence
+      label: 'Role to level assignments'
+      sequence:
+        type: string
+        label: 'License level assigned to this role'
+
+license_service.content_rules:
+  type: config_object
+  label: 'License Service content access rules'
+  mapping:
+    rules:
+      type: sequence
+      label: 'Per-level per-content-type rules'
+      sequence:
+        type: mapping
+        label: 'Rule entry'
+        mapping:
+          level:
+            type: string
+            label: 'License level'
+          content_type:
+            type: string
+            label: 'Content type machine name'
+          can_view:
+            type: boolean
+            label: 'May view content of this type at this level'
+          can_create:
+            type: boolean
+            label: 'May create content of this type at this level'
+          can_edit:
+            type: boolean
+            label: 'May edit own content of this type at this level'
+          can_delete:
+            type: boolean
+            label: 'May delete own content of this type at this level'
+          create_quota:
+            type: integer
+            label: 'Max nodes creatable (0 = unlimited)'
+          edit_quota:
+            type: integer
+            label: 'Max nodes editable (0 = unlimited)'
+          metered_views:
+            type: integer
+            label: 'Max views per period (0 = unlimited)'
+          metered_period:
+            type: string
+            label: 'Meter reset period: monthly, weekly, or daily'
+          gated_fields:
+            type: sequence
+            label: 'Field names hidden at this level'
+            sequence:
+              type: string
+              label: 'Field name'
+          gate_file_downloads:
+            type: boolean
+            label: 'Restrict file/media downloads to this level and above'

@@ -1,0 +1,16 @@
+{
+  "name": "license-service/license-service",
+  "description": "Drupal 10/11 module suite that gates content and AI token usage by license level and user role against the License Verification Server.",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Jeremiah Buttler",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.1",
+    "ext-sodium": "*"
+  }
+}

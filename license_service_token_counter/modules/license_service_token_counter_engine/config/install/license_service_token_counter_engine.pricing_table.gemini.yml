@@ -1,0 +1,26 @@
+# Author: Jeremiah Buttler
+# Default pricing for the Google Gemini drupal/ai provider plugin.
+# drupal/ai provider plugin id is 'gemini'.
+# Rates are per 1,000,000 tokens (unit: 1000000), USD.
+# Verify against https://ai.google.dev/pricing before billing use.
+langcode: en
+status: true
+dependencies: {}
+id: gemini
+label: 'Google Gemini pricing'
+provider: gemini
+unit: 1000000
+weight: 0
+rates:
+  - model: gemini-1.5-pro
+    input: 1.25
+    output: 5.0
+  - model: gemini-1.5-flash
+    input: 0.075
+    output: 0.3
+  - model: gemini-2.0-flash
+    input: 0.1
+    output: 0.4
+  - model: '*'
+    input: 0.1
+    output: 0.4

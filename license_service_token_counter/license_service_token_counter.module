@@ -1,0 +1,233 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for the License Service Token Counter module.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function license_service_token_counter_help(string $route_name, RouteMatchInterface $route_match): ?string {
+  switch ($route_name) {
+    case 'help.page.license_service_token_counter':
+      $output  = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('License Service Token Counter tracks AI token usage and estimated cost for every interaction made through the AI module, across any connected provider.') . '</p>';
+
+      $output .= '<h3>' . t('How to view AI token usage') . '</h3>';
+      $output .= '<ol>';
+      $output .= '<li>' . t('Go to <em>Reports &raquo; AI token usage</em> (<code>/admin/reports/ai-token-usage</code>).') . '</li>';
+      $output .= '<li>' . t('The summary cards at the top show total AI calls, token counts (input, output, total), and estimated cost.') . '</li>';
+      $output .= '<li>' . t('The table below lists individual records: when the call was made, the provider and model used, operation type, token counts, and a cost badge.') . '</li>';
+      $output .= '<li>' . t('If you have only the <em>View own AI token usage</em> permission, only your own records appear.') . '</li>';
+      $output .= '</ol>';
+
+      $output .= '<h3>' . t('How to view usage by user') . '</h3>';
+      $output .= '<ol>';
+      $output .= '<li>' . t('Go to <em>Reports &raquo; AI token usage &raquo; By user</em> (<code>/admin/reports/ai-token-usage/by-user</code>).') . '</li>';
+      $output .= '<li>' . t('The table shows each user and their total token consumption (lifetime). Type a username in the search box and click <strong>Apply</strong> to filter.') . '</li>';
+      $output .= '<li>' . t('Click any column header to sort. The <em>Total tokens (lifetime)</em> column is the default sort.') . '</li>';
+      $output .= '<li>' . t('To adjust the columns, filters, or period shown, go to <em>Structure &raquo; Views</em> and edit the <em>AI token usage by user</em> view.') . '</li>';
+      $output .= '</ol>';
+
+      $output .= '<h3>' . t('How to configure capture') . '</h3>';
+      $output .= '<ol>';
+      $output .= '<li>' . t('Go to <em>Configuration &raquo; System &raquo; License Service Token Counter</em> (<code>/admin/config/ai/token-counter</code>).') . '</li>';
+      $output .= '<li>' . t('Check or uncheck <strong>Capture AI token usage</strong> to enable or disable recording. Existing records are not affected.') . '</li>';
+      $output .= '<li>' . t('In <strong>Operation types to capture</strong>, list the AI operation types you want to track (one per line: <code>chat</code>, <code>embeddings</code>, <code>text_to_image</code>, etc.). Leave the field empty to capture every operation type.') . '</li>';
+      $output .= '<li>' . t('Uncheck <strong>Record anonymous (visitor) usage</strong> to skip recording AI calls made by unauthenticated visitors (uid 0).') . '</li>';
+      $output .= '<li>' . t('Save configuration.') . '</li>';
+      $output .= '</ol>';
+
+      $output .= '<h3>' . t('How to manage data retention') . '</h3>';
+      $output .= '<ol>';
+      $output .= '<li>' . t('Go to <em>Configuration &raquo; System &raquo; License Service Token Counter</em>.') . '</li>';
+      $output .= '<li>' . t('Set <strong>Retention (days)</strong> to the number of days you want to keep usage records. Set to <code>0</code> to keep records forever.') . '</li>';
+      $output .= '<li>' . t('Records older than the retention window are deleted automatically each time Drupal cron runs.') . '</li>';
+      $output .= '</ol>';
+
+      $output .= '<h3>' . t('Understanding cost estimates') . '</h3>';
+      $output .= '<ul>';
+      $output .= '<li>' . t('<strong>Computed</strong> — the Cost Engine calculated a cost using its local pricing table (see <em>Configuration &raquo; AI &raquo; Token Counter &raquo; Pricing</em>).') . '</li>';
+      $output .= '<li>' . t('<strong>Locked</strong> — cost estimation is unavailable. Enable the <em>License Service Token Counter: Cost Engine</em> submodule to compute cost. Token counts are still recorded either way.') . '</li>';
+      $output .= '<li>' . t('<strong>No price</strong> — the license is active but the local pricing table carries no rate for this provider/model combination.') . '</li>';
+      $output .= '<li>' . t('Cost figures are estimates derived from token counts and the module\'s local pricing table. They may differ from amounts billed by AI providers.') . '</li>';
+      $output .= '</ul>';
+
+      $output .= '<h3>' . t('Cost estimation and licensing') . '</h3>';
+      $output .= '<p>' . t('License Service Token Counter captures token usage on its own — no license is required to count tokens or estimate cost. Estimated cost is provided by the optional <em>License Service Token Counter: Cost Engine</em> submodule. Without it, token counts are still recorded and all cost figures show as <em>Locked</em>. Check the <em>Reports &raquo; Status report</em> to confirm the current status.') . '</p>';
+
+      return $output;
+  }
+
+  return NULL;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * Registers the shared usage-block theme hook used by all three block plugins
+ * (site total, own usage, and account-page usage). The template provides the
+ * data attributes read by the real-time polling script (Phase E).
+ */
+function license_service_token_counter_theme(): array {
+  return [
+    'license_service_token_counter_usage_block' => [
+      'variables' => [
+        'tokens'      => 0,
+        'scope_label' => '',
+        'period_label' => '',
+        'scope'       => 'site',
+        'uid'         => NULL,
+        'period'      => 'lifetime',
+        // Per-provider, per-model breakdown table. Author: Jeremiah Buttler.
+        'breakdown'   => [],
+        // Estimated cost summary {amount: float, currency: string}.
+        'cost'        => [],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_views_data().
+ *
+ * Exposes the license_service_token_usage table as a Views base table and registers the
+ * computed per-user token sum field on the users_field_data table.
+ */
+function license_service_token_counter_views_data(): array {
+  $data = [];
+
+  // ── Base table: license_service_token_usage ──────────────────────────────────────────
+  $data['license_service_token_usage']['table']['group'] = t('License Service Token Counter');
+  $data['license_service_token_usage']['table']['base']  = [
+    'field'  => 'id',
+    'title'  => t('AI token usage records'),
+    'help'   => t('Individual AI interaction records captured by License Service Token Counter.'),
+    'weight' => -10,
+  ];
+
+  // Join license_service_token_usage.uid → users_field_data.uid (for relationship).
+  $data['license_service_token_usage']['table']['join']['users_field_data'] = [
+    'left_field' => 'uid',
+    'field'      => 'uid',
+  ];
+
+  // id.
+  $data['license_service_token_usage']['id'] = [
+    'title' => t('Record ID'),
+    'help'  => t('The unique numeric ID of this usage record.'),
+    'field' => ['id' => 'numeric'],
+    'sort'  => ['id' => 'standard'],
+    'filter' => ['id' => 'numeric'],
+  ];
+
+  // Uid → user relationship.
+  $data['license_service_token_usage']['uid'] = [
+    'title'    => t('User'),
+    'help'     => t('The user who triggered the AI call.'),
+    'field'    => ['id' => 'numeric'],
+    'argument' => ['id' => 'numeric'],
+    'filter'   => ['id' => 'numeric'],
+    'sort'     => ['id' => 'standard'],
+    'relationship' => [
+      'base'       => 'users_field_data',
+      'base field' => 'uid',
+      'id'         => 'standard',
+      'label'      => t('User'),
+    ],
+  ];
+
+  // created.
+  $data['license_service_token_usage']['created'] = [
+    'title'  => t('Date'),
+    'help'   => t('When the AI interaction was recorded.'),
+    'field'  => ['id' => 'date'],
+    'sort'   => ['id' => 'date'],
+    'filter' => ['id' => 'date'],
+  ];
+
+  // provider_id.
+  $data['license_service_token_usage']['provider_id'] = [
+    'title'  => t('Provider'),
+    'help'   => t('AI provider plugin id (e.g. openai, anthropic).'),
+    'field'  => ['id' => 'standard'],
+    'sort'   => ['id' => 'standard'],
+    'filter' => ['id' => 'string'],
+    'argument' => ['id' => 'string'],
+  ];
+
+  // model_id.
+  $data['license_service_token_usage']['model_id'] = [
+    'title'  => t('Model'),
+    'help'   => t('Model id used for the AI call.'),
+    'field'  => ['id' => 'standard'],
+    'sort'   => ['id' => 'standard'],
+    'filter' => ['id' => 'string'],
+    'argument' => ['id' => 'string'],
+  ];
+
+  // operation_type.
+  $data['license_service_token_usage']['operation_type'] = [
+    'title'  => t('Operation type'),
+    'help'   => t('AI operation type (chat, embeddings, etc.).'),
+    'field'  => ['id' => 'standard'],
+    'sort'   => ['id' => 'standard'],
+    'filter' => ['id' => 'string'],
+    'argument' => ['id' => 'string'],
+  ];
+
+  // Token count fields (shared handler).
+  foreach ([
+    'input_tokens'     => t('Input tokens'),
+    'output_tokens'    => t('Output tokens'),
+    'cached_tokens'    => t('Cached tokens'),
+    'reasoning_tokens' => t('Reasoning tokens'),
+    'total_tokens'     => t('Total tokens'),
+  ] as $field => $title) {
+    $data['license_service_token_usage'][$field] = [
+      'title'  => $title,
+      'help'   => t('Token count for this AI call.'),
+      'field'  => ['id' => 'numeric'],
+      'sort'   => ['id' => 'standard'],
+      'filter' => ['id' => 'numeric'],
+    ];
+  }
+
+  // cost_status.
+  $data['license_service_token_usage']['cost_status'] = [
+    'title'  => t('Cost status'),
+    'help'   => t('computed | locked | unpriced.'),
+    'field'  => ['id' => 'standard'],
+    'sort'   => ['id' => 'standard'],
+    'filter' => ['id' => 'string'],
+  ];
+
+  // ── Computed token-sum field on the users table ─────────────────────────
+  $data['users_field_data']['license_service_token_counter_tokens'] = [
+    'title' => t('AI token usage'),
+    'help'  => t('Total AI tokens used by this user (period configurable per field).'),
+    'field' => [
+      'id'    => 'license_service_token_counter_user_tokens',
+      'click sortable' => TRUE,
+    ],
+  ];
+
+  return $data;
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Delegates retention enforcement to UsageRecorder::purgeExpired(), which owns
+ * the retention config read and the database delete.
+ */
+function license_service_token_counter_cron(): void {
+  \Drupal::service('license_service_token_counter.recorder')->purgeExpired();
+}

@@ -1,0 +1,11 @@
+license_service_token_limits.settings:
+  type: config_object
+  label: 'License Service token limits settings'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Enforce per-level token quotas'
+    quotas:
+      type: mapping
+      label: 'Per-level quotas'
+      mapping: []

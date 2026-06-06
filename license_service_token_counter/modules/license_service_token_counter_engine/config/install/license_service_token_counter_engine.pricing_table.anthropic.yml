@@ -1,0 +1,32 @@
+# Author: Jeremiah Buttler
+# Default pricing for the Anthropic drupal/ai provider plugin.
+# Rates are per 1,000,000 tokens (unit: 1000000), USD.
+# Verify against https://anthropic.com/pricing before billing use.
+langcode: en
+status: true
+dependencies: {}
+id: anthropic
+label: 'Anthropic pricing'
+provider: anthropic
+unit: 1000000
+weight: 0
+rates:
+  - model: claude-sonnet-4-5
+    input: 3.0
+    output: 15.0
+    cached: 0.3
+  - model: claude-3-5-sonnet
+    input: 3.0
+    output: 15.0
+    cached: 0.3
+  - model: claude-3-5-haiku
+    input: 0.8
+    output: 4.0
+    cached: 0.08
+  - model: claude-3-opus
+    input: 15.0
+    output: 75.0
+    cached: 1.5
+  - model: '*'
+    input: 3.0
+    output: 15.0

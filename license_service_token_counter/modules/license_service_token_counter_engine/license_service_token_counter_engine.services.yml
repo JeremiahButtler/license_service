@@ -1,0 +1,23 @@
+# Author: Jeremiah Buttler
+services:
+  # Resolves per-provider/per-model pricing from enabled pricing_table config
+  # entities. The entity_type.manager is injected first so the resolver can
+  # load and iterate PricingTable entities; config.factory provides the display
+  # currency setting. The License Verification Server is never consulted for
+  # pricing — only for license status.
+  license_service_token_counter_engine.pricing:
+    class: Drupal\license_service_token_counter_engine\Pricing\PricingResolver
+    arguments:
+      - '@entity_type.manager'
+      - '@config.factory'
+
+  # The cost calculator. Installed in place of the shell's NullCostCalculator
+  # by LicenseServiceTokenCounterEngineServiceProvider. Requires an active site
+  # license — calculate() returns CostResult::locked() when the license is
+  # absent or inactive, so getCostSummary() naturally reports 0 (it only sums
+  # STATUS_COMPUTED rows). Token capture is unaffected.
+  license_service_token_counter_engine.calculator:
+    class: Drupal\license_service_token_counter_engine\Cost\EngineCostCalculator
+    arguments:
+      - '@license_service_token_counter_engine.pricing'
+      - '@license_service_token_counter.license_bridge'

@@ -1,0 +1,75 @@
+﻿{#
+/**
+ * @file
+ * Template for the AI token usage blocks (site total, own usage, account page).
+ *
+ * Available variables:
+ * - tokens:       integer — total tokens for the chosen scope and period.
+ * - scope_label:  string  — human-readable scope (e.g. "Site total", "My usage").
+ * - period_label: string  — human-readable period (e.g. "Per month").
+ * - scope:        string  — machine scope key: site | own | user (for AJAX).
+ * - uid:          integer|null — user id for per-user scopes (for AJAX).
+ * - period:       string  — period key: day|week|month|year|lifetime (for AJAX).
+ * - breakdown:    array   — per-provider, per-model token breakdown. Each entry
+ *                           has: provider (string), total (int), models (array of
+ *                           {model: string, tokens: int} ordered by tokens desc).
+ * - cost:         array   — estimated cost summary {amount: float, currency: string}.
+ *                           Only shown when the Cost Engine submodule is enabled.
+ *
+ * Data attributes are read by license-service-token-counter-usage.js for real-time updates.
+ *
+ * Author: Jeremiah Buttler.
+ */
+#}
+<div class="license-service-token-counter-usage-block"
+     data-atc-scope="{{ scope }}"
+     data-atc-period="{{ period }}"
+     {% if uid is not null %}data-atc-uid="{{ uid }}"{% endif %}
+     aria-live="polite"
+     aria-atomic="true">
+  <div class="atc-usage-count">
+    <span class="atc-count">{{ tokens|number_format }}</span>
+    <span class="atc-unit">{{ 'tokens'|t }}</span>
+  </div>
+  <div class="atc-usage-meta">
+    <span class="atc-scope-label">{{ scope_label }}</span>
+    <span class="atc-period-label">{{ period_label }}</span>
+  </div>
+  {% if cost is not empty %}
+    <div class="atc-cost-line" data-atc-cost>
+      <span class="atc-cost-value">{{ cost.amount|number_format(4) }}</span>
+      {% if cost.currency %}<span class="atc-cost-currency"> {{ cost.currency }}</span>{% endif %}
+      <span class="atc-cost-label"> {{ 'est. cost'|t }}</span>
+    </div>
+  {% endif %}
+  <table class="atc-breakdown">
+    <thead>
+      <tr>
+        <th>{{ 'Provider'|t }}</th>
+        <th>{{ 'Model'|t }}</th>
+        <th>{{ 'Tokens'|t }}</th>
+      </tr>
+    </thead>
+    <tbody data-atc-breakdown>
+      {% if breakdown %}
+        {% for entry in breakdown %}
+          <tr class="atc-breakdown-provider">
+            <td colspan="2">{{ entry.provider ? entry.provider : '—' }}</td>
+            <td>{{ entry.total|number_format }}</td>
+          </tr>
+          {% for model_row in entry.models %}
+            <tr class="atc-breakdown-model">
+              <td></td>
+              <td class="atc-breakdown-model-name">{{ model_row.model ? model_row.model : '—' }}</td>
+              <td>{{ model_row.tokens|number_format }}</td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+      {% else %}
+        <tr class="atc-breakdown-empty">
+          <td colspan="3">{{ 'No usage yet.'|t }}</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>

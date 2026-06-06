@@ -1,0 +1,329 @@
+<?php
+
+/**
+ * @file
+ * Install, schema and requirements for the License Service Token Counter module.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+use Drupal\license_service_token_counter\Cost\UsageData;
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_schema().
+ */
+function license_service_token_counter_schema(): array {
+  $schema['license_service_token_usage'] = [
+    'description' => 'One row per AI interaction captured from the AI module events.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'uuid' => [
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Unique identifier for the usage record.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp the interaction was recorded.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'User who triggered the interaction.',
+      ],
+      'provider_id' => [
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'AI provider plugin id (e.g. openai, anthropic).',
+      ],
+      'model_id' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Model id used for the call.',
+      ],
+      'operation_type' => [
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'AI operation type (chat, embeddings, etc.).',
+      ],
+      'request_thread_id' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'AI module request thread id, for de-duplication.',
+      ],
+      'input_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Input/prompt tokens.',
+      ],
+      'output_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Output/completion tokens.',
+      ],
+      'cached_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cached/cache-read tokens.',
+      ],
+      'reasoning_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Reasoning tokens (where reported).',
+      ],
+      'total_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Total tokens for the call.',
+      ],
+      'estimated_cost' => [
+        'type' => 'numeric',
+        'precision' => 18,
+        'scale' => 8,
+        'not null' => FALSE,
+        'description' => 'Estimated cost, or NULL when not priced/locked.',
+      ],
+      'currency' => [
+        'type' => 'varchar_ascii',
+        'length' => 8,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'ISO currency code for the estimated cost.',
+      ],
+      'cost_status' => [
+        'type' => 'varchar_ascii',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => 'locked',
+        'description' => 'computed | locked | unpriced.',
+      ],
+      'tags' => [
+        'type' => 'varchar',
+        'length' => 1024,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Comma-separated AI call tags.',
+      ],
+      'host_module' => [
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Best-effort module/route that initiated the call.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'uuid' => ['uuid'],
+    ],
+    'indexes' => [
+      'created' => ['created'],
+      'provider_id' => ['provider_id'],
+      'model_id' => ['model_id'],
+      'uid' => ['uid'],
+      // Composite index for windowed per-user token aggregates (phase A).
+      'uid_created' => ['uid', 'created'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_requirements().
+ *
+ * Surfaces, on the status report, whether the Cost Engine submodule is active.
+ * Token capture itself runs without any additional requirement; cost estimation
+ * needs the engine submodule (no license required).
+ */
+function license_service_token_counter_requirements(string $phase): array {
+  $requirements = [];
+
+  if ($phase !== 'runtime') {
+    return $requirements;
+  }
+
+  if (\Drupal::moduleHandler()->moduleExists('license_service_token_counter_engine')) {
+    $value       = t('Token capture and cost estimation active');
+    $severity    = REQUIREMENT_OK;
+    $description = t('License Service Token Counter is capturing AI token usage and computing cost estimates using the Cost Engine.');
+  }
+  else {
+    $value       = t('Token capture active; cost estimation unavailable');
+    $severity    = REQUIREMENT_INFO;
+    $description = t('License Service Token Counter is capturing AI token usage. To enable cost estimation, install and enable the <em>License Service Token Counter: Cost Engine</em> submodule.');
+  }
+
+  $requirements['license_service_token_counter_engine'] = [
+    'title'       => t('License Service Token Counter'),
+    'value'       => $value,
+    'severity'    => $severity,
+    'description' => $description,
+  ];
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Removes the module's configuration object. Note: Drupal core automatically
+ * drops the license_service_token_usage table (and all captured token rows) when the
+ * module is uninstalled. Export or back up the table before uninstalling
+ * if the usage history must be preserved.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_token_counter_uninstall(): void {
+  \Drupal::configFactory()->getEditable('license_service_token_counter.settings')->delete();
+}
+
+/**
+ * Add composite index (uid, created) for windowed per-user token aggregates.
+ */
+function license_service_token_counter_update_10001(): void {
+  $schema = \Drupal::database()->schema();
+  if ($schema->indexExists('license_service_token_usage', 'uid_created')) {
+    return;
+  }
+  $spec = [
+    'fields' => [
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'created' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+  ];
+  $schema->addIndex('license_service_token_usage', 'uid_created', ['uid', 'created'], $spec);
+}
+
+/**
+ * Remove the unused license_feature key from license_service_token_counter.settings config.
+ *
+ * The key was shipped in config/install but was never read by any module code
+ * (FEATURE_KEY in LicenseBridge is hardcoded). Clearing it here removes the
+ * stale value from active config on existing installs without disrupting anything.
+ */
+function license_service_token_counter_update_10002(): void {
+  \Drupal::configFactory()
+    ->getEditable('license_service_token_counter.settings')
+    ->clear('license_feature')
+    ->save();
+}
+
+/**
+ * Switch retention_days default from 365 to 0 (keep forever).
+ *
+ * The original default of 365 caused cron to silently purge usage rows older
+ * than one year. Token counting is meant to be a permanent record — counters
+ * should never reset due to age. This update flips any site still at the old
+ * default to 0 (keep forever) without touching sites where an admin has
+ * deliberately chosen a retention window.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_token_counter_update_10003(): void {
+  $config = \Drupal::configFactory()->getEditable('license_service_token_counter.settings');
+  // Only change if still at the old shipped default (365). Leave any
+  // intentional override in place.
+  if ((int) $config->get('retention_days') === 365) {
+    $config->set('retention_days', 0)->save();
+  }
+}
+
+/**
+ * Back-fill estimated cost for rows captured before the Cost Engine was active.
+ *
+ * Cost estimation previously required an active license, so rows captured
+ * before that condition was met were stored with cost_status='locked' and
+ * estimated_cost=NULL. Now that cost no longer requires a license, this update
+ * re-runs the calculator over every locked row so historical cost figures appear
+ * on the report and blocks.
+ *
+ * Safe to run multiple times — a second run finds no locked rows and exits
+ * immediately. Author: Jeremiah Buttler.
+ */
+function license_service_token_counter_update_10004(): void {
+  $database   = \Drupal::database();
+  $calculator = \Drupal::service('license_service_token_counter.cost');
+
+  // Collect all locked row ids (may be large; fetch ids first, then batch).
+  $ids = $database->select('license_service_token_usage', 'u')
+    ->fields('u', ['id'])
+    ->condition('u.cost_status', 'locked')
+    ->execute()
+    ->fetchCol();
+
+  if (empty($ids)) {
+    return;
+  }
+
+  foreach (array_chunk($ids, 100) as $chunk) {
+    $rows = $database->select('license_service_token_usage', 'u')
+      ->fields('u')
+      ->condition('u.id', $chunk, 'IN')
+      ->execute();
+
+    foreach ($rows as $row) {
+      $usage = new UsageData(
+        (string) $row->provider_id,
+        (string) $row->model_id,
+        (string) $row->operation_type,
+        (int) $row->input_tokens,
+        (int) $row->output_tokens,
+        (int) $row->cached_tokens,
+        (int) $row->reasoning_tokens,
+        (int) $row->total_tokens,
+      );
+      $result = $calculator->calculate($usage);
+      $database->update('license_service_token_usage')
+        ->fields([
+          'estimated_cost' => $result->amount,
+          'cost_status'    => $result->status,
+          'currency'       => $result->currency ?? '',
+        ])
+        ->condition('id', $row->id)
+        ->execute();
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# --- Secrets & credentials - NEVER commit ---
+.env
+.env.*
+*.pem
+*.key
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+deploy_key
+deploy_key.pub
+.git-credentials
+*.git-credentials
+*.pfx
+*.p12
+*.keystore
+credentials.json
+service-account*.json
+secrets.yml
+secrets.yaml
+.pypirc
+
+# --- OS / editor metadata ---
+.DS_Store
+Thumbs.db
+.idea/
+
+# --- Claude Code machine-specific session files (manifest IS committed) ---
+.claude/
+
+# --- PHP / Composer ---
+vendor/
+.phpunit.result.cache
+composer.phar
+
+# --- Local-machine analysis bootstraps (contain machine-specific paths) ---
+phpunit-bootstrap.php
+phpunit-runner.php
+phpstan-bootstrap.php
+phpstan*.neon
+phpstan-drupal-stubs*.php
+phpcs-bootstrap.php
+
+# --- Drupal ---
+sites/*/files/
+sites/*/settings.local.php
+

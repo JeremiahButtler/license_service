@@ -1,0 +1,7 @@
+﻿# Author: Jeremiah Buttler
+license_service_token_counter.settings:
+  title: 'License Service Token Counter'
+  description: 'Configure AI token usage capture, retention and cost display.'
+  parent: system.admin_config_system
+  route_name: license_service_token_counter.settings
+  weight: 10

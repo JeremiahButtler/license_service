@@ -1,0 +1,47 @@
+license_service.settings:
+  path: '/admin/config/license-service/settings'
+  defaults:
+    _form: '\Drupal\license_service\Form\SettingsForm'
+    _title: 'License Service Settings'
+  requirements:
+    _permission: 'administer license gate'
+
+license_service.role_levels:
+  path: '/admin/config/license-service/role-levels'
+  defaults:
+    _form: '\Drupal\license_service\Form\RoleLevelForm'
+    _title: 'Role Level Mapping'
+  requirements:
+    _permission: 'administer license gate'
+
+license_service.content_rules:
+  path: '/admin/config/license-service/content-rules'
+  defaults:
+    _form: '\Drupal\license_service\Form\ContentRulesForm'
+    _title: 'Content Access Rules'
+  requirements:
+    _permission: 'administer license gate'
+
+license_service.status:
+  path: '/admin/config/license-service/status'
+  defaults:
+    _controller: '\Drupal\license_service\Controller\StatusController::overview'
+    _title: 'License Status'
+  requirements:
+    _permission: 'administer license gate'
+
+license_service.features:
+  path: '/admin/config/license-service/features'
+  defaults:
+    _controller: '\Drupal\license_service\Controller\FeaturesController::overview'
+    _title: 'Features'
+  requirements:
+    _permission: 'administer license gate'
+
+license_service.terms:
+  path: '/admin/config/license-service/terms'
+  defaults:
+    _controller: '\Drupal\license_service\Controller\TermsController::overview'
+    _title: 'Terms & Conditions'
+  requirements:
+    _permission: 'administer license gate'

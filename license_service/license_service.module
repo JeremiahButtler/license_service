@@ -1,0 +1,385 @@
+<?php
+
+/**
+ * @file
+ * License Service — hooks for content access control via the License Verification Server.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use Drupal\node\NodeInterface;
+use Drupal\user\UserInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+
+/**
+ * Implements hook_help().
+ *
+ * Task-oriented help for each admin page. Author: Jeremiah Buttler.
+ */
+function license_service_help(string $route_name, RouteMatchInterface $route_match): array {
+  $output = [];
+
+  switch ($route_name) {
+    case 'help.page.license_service':
+      $output['title'] = ['#markup' => '<h2>' . t('About License Service') . '</h2>'];
+      $output['about'] = ['#markup' => '<p>' . t('License Service connects your Drupal site to the <a href="https://www.licenseverificationserver.com">License Verification Server</a> and restricts content access based on each user\'s license level. Administrators configure a site license, map user roles to license levels, and set per-level content entitlements per content type.') . '</p>'];
+
+      $output['gs_title'] = ['#markup' => '<h3>' . t('Getting started') . '</h3>'];
+      $settings_url       = Url::fromRoute('license_service.settings')->toString();
+      $levels_url         = Url::fromRoute('license_service.role_levels')->toString();
+      $rules_url          = Url::fromRoute('license_service.content_rules')->toString();
+      $status_url         = Url::fromRoute('license_service.status')->toString();
+      $output['gs_steps'] = [
+        '#markup' => '<ol>'
+        . '<li>' . t('<a href=":url">Enter your license key</a> and click <strong>Activate</strong>.', [':url' => $settings_url]) . '</li>'
+        . '<li>' . t('<a href=":url">Map Drupal roles to license levels</a> (e.g. Editor → Standard, Publisher → Premium).', [':url' => $levels_url]) . '</li>'
+        . '<li>' . t('<a href=":url">Configure content rules</a> per level and content type: view, create/edit quotas, metered views, field gating, file gating.', [':url' => $rules_url]) . '</li>'
+        . '<li>' . t('Monitor the <a href=":url">license status dashboard</a> for tier, expiry, and warnings.', [':url' => $status_url]) . '</li>'
+        . '</ol>',
+      ];
+
+      $output['access_title'] = ['#markup' => '<h3>' . t('How access decisions work') . '</h3>'];
+      $output['access_body']  = ['#markup' => '<p>' . t("A user's effective license level is the highest level mapped to any of their roles. The module checks that level against the content rules for the operation (view, create, edit) and content type. Quotas and metered limits are tracked in the database. The <em>bypass license gate</em> permission overrides all restrictions.") . '</p>'];
+
+      $output['key_title'] = ['#markup' => '<h3>' . t('License key storage') . '</h3>'];
+      $output['key_body']  = ['#markup' => '<p>' . t('For production use, store the license key outside exported configuration: use the <a href="https://www.drupal.org/project/key">Key module</a> or set the key in <code>settings.php</code>. The Settings page explains all options.') . '</p>'];
+      break;
+
+    case 'license_service.settings':
+      $output[] = ['#markup' => '<p class="description">' . t('Enter your license key, choose a storage method, and configure server connectivity. Click <strong>Activate</strong> to register this site. The status panel below updates after each activation attempt.') . '</p>'];
+      break;
+
+    case 'license_service.role_levels':
+      $output[] = ['#markup' => '<p class="description">' . t("Assign a license level to each Drupal role. A user's effective level is the highest level assigned to any of their roles. Available levels are constrained by your site license tier.") . '</p>'];
+      break;
+
+    case 'license_service.content_rules':
+      $output[] = ['#markup' => '<p class="description">' . t('Configure access entitlements per level and content type. Set view access, create/edit quotas, metered view limits, which fields to hide, and whether file downloads require this level or above.') . '</p>'];
+      break;
+
+    case 'license_service.status':
+      $output[] = ['#markup' => '<p class="description">' . t('The current license state: tier, expiry, seats used, premium user count, and any active warnings.') . '</p>'];
+      break;
+  }
+
+  return $output;
+}
+
+/**
+ * Implements hook_node_access().
+ *
+ * Gates view/update/delete on existing nodes by license level.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_node_access(NodeInterface $node, string $op, AccountInterface $account): AccessResultInterface {
+  if ($account->hasPermission('bypass license gate')) {
+    return AccessResult::neutral()->cachePerPermissions();
+  }
+  /** @var \Drupal\license_service\Access\ContentAccessChecker $checker */
+  $checker = \Drupal::service('license_service.content_access_checker');
+  return $checker->checkNodeAccess($node, $op, $account);
+}
+
+/**
+ * Implements hook_node_create_access().
+ *
+ * Gates node creation and enforces per-level create quotas.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_node_create_access(AccountInterface $account, array $context, string $entity_bundle): AccessResultInterface {
+  if ($account->hasPermission('bypass license gate')) {
+    return AccessResult::neutral()->cachePerPermissions();
+  }
+  /** @var \Drupal\license_service\Access\ContentAccessChecker $checker */
+  $checker = \Drupal::service('license_service.content_access_checker');
+  return $checker->checkCreateAccess($account, $context, $entity_bundle);
+}
+
+/**
+ * Implements hook_entity_access().
+ *
+ * Gates access on non-node content entities by license level.
+ * Node entities are handled by hook_node_access() above.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_entity_access(EntityInterface $entity, string $op, AccountInterface $account): AccessResultInterface {
+  // Nodes are handled by the more specific hook; defer here to avoid double-firing.
+  if ($entity->getEntityTypeId() === 'node') {
+    return AccessResult::neutral();
+  }
+  if ($account->hasPermission('bypass license gate')) {
+    return AccessResult::neutral()->cachePerPermissions();
+  }
+  /** @var \Drupal\license_service\Access\ContentAccessChecker $checker */
+  $checker = \Drupal::service('license_service.content_access_checker');
+  return $checker->checkEntityAccess($entity, $op, $account);
+}
+
+/**
+ * Implements hook_entity_field_access().
+ *
+ * Hides specific fields based on the user's license level.
+ * Only the 'view' operation is gated; edit access is handled via
+ * hook_node_access/hook_entity_access. Author: Jeremiah Buttler.
+ */
+function license_service_entity_field_access(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResultInterface {
+  if ($account->hasPermission('bypass license gate')) {
+    return AccessResult::neutral()->cachePerPermissions();
+  }
+  if ($operation !== 'view') {
+    return AccessResult::neutral();
+  }
+  /** @var \Drupal\license_service\Access\ContentAccessChecker $checker */
+  $checker = \Drupal::service('license_service.content_access_checker');
+  return $checker->checkFieldAccess($operation, $field_definition, $account, $items);
+}
+
+/**
+ * Implements hook_file_download().
+ *
+ * Denies private file downloads when the user's license level does not permit
+ * them. Returns -1 to deny, NULL to abstain, or headers array to allow.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_file_download(string $uri): array|int|null {
+  $account = \Drupal::currentUser();
+  if ($account->hasPermission('bypass license gate')) {
+    return NULL;
+  }
+  /** @var \Drupal\license_service\Access\ContentAccessChecker $checker */
+  $checker = \Drupal::service('license_service.content_access_checker');
+  return $checker->checkFileDownload($uri);
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ * Records a metered view when a node is actually rendered for a real page view.
+ * Only fires for the 'full' and 'default' view modes (not teasers, search
+ * excerpts, etc.) so the counter reflects genuine content consumption.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_node_view(array &$build, NodeInterface $node, EntityViewDisplayInterface $display, string $view_mode): void {
+  // Only count full/default renders, not teasers or search excerpts.
+  if (!in_array($view_mode, ['full', 'default'], TRUE)) {
+    return;
+  }
+
+  $account = \Drupal::currentUser();
+  if ($account->isAnonymous() || $account->hasPermission('bypass license gate')) {
+    return;
+  }
+
+  /** @var \Drupal\license_service\LicenseManagerService $manager */
+  $manager     = \Drupal::service('license_service.license_manager');
+  $checker     = \Drupal::service('license_service.content_access_checker');
+  $resolver    = \Drupal::service('license_service.entitlement_resolver');
+  $level       = $manager->getLevelForAccount($account);
+  $contentType = $node->bundle();
+
+  $limit = $resolver->getViewLimit($level, $contentType);
+  if ($limit <= 0) {
+    // Unlimited — nothing to record.
+    return;
+  }
+
+  $period    = $resolver->getViewPeriod($level, $contentType);
+  $periodKey = $resolver->getCurrentPeriodKey($period);
+  $checker->recordMeteredView((int) $account->id(), $contentType, $periodKey);
+}
+
+/**
+ * Implements hook_node_insert().
+ *
+ * Records create-quota usage when a node is successfully saved for the first
+ * time. The acting user is the currently authenticated user.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_node_insert(NodeInterface $node): void {
+  $account = \Drupal::currentUser();
+  if ($account->isAnonymous() || $account->hasPermission('bypass license gate')) {
+    return;
+  }
+
+  /** @var \Drupal\license_service\LicenseManagerService $manager */
+  $manager     = \Drupal::service('license_service.license_manager');
+  $checker     = \Drupal::service('license_service.content_access_checker');
+  $resolver    = \Drupal::service('license_service.entitlement_resolver');
+  $level       = $manager->getLevelForAccount($account);
+  $contentType = $node->bundle();
+
+  // Only record if a quota is actually configured (0 = unlimited, skip).
+  if ($resolver->getCreateQuota($level, $contentType) > 0) {
+    $checker->recordQuotaUsage((int) $account->id(), $contentType, 'create');
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ *
+ * Records edit-quota usage when a node is successfully updated.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_node_update(NodeInterface $node): void {
+  $account = \Drupal::currentUser();
+  if ($account->isAnonymous() || $account->hasPermission('bypass license gate')) {
+    return;
+  }
+
+  /** @var \Drupal\license_service\LicenseManagerService $manager */
+  $manager     = \Drupal::service('license_service.license_manager');
+  $checker     = \Drupal::service('license_service.content_access_checker');
+  $resolver    = \Drupal::service('license_service.entitlement_resolver');
+  $level       = $manager->getLevelForAccount($account);
+  $contentType = $node->bundle();
+
+  if ($resolver->getEditQuota($level, $contentType) > 0) {
+    $checker->recordQuotaUsage((int) $account->id(), $contentType, 'edit');
+  }
+}
+
+/**
+ * Implements hook_user_presave().
+ *
+ * Enforces per-role seat caps when a premium role is being assigned.
+ * Logs a warning and removes the role assignment if the seat cap is exceeded.
+ * Does NOT block anonymous user saves (uid = 0) or admin adds (bypass permission).
+ * Author: Jeremiah Buttler.
+ */
+function license_service_user_presave(UserInterface $user): void {
+  // Only check on updates to existing users (new user creates are caught by
+  // hook_node_create_access via role assignment forms).
+  if ($user->isNew()) {
+    return;
+  }
+
+  // Admins with bypass permission are exempt.
+  $currentUser = \Drupal::currentUser();
+  if ($currentUser->hasPermission('bypass license gate')) {
+    return;
+  }
+
+  /** @var \Drupal\license_service\SeatCapService $seatCap */
+  $seatCap = \Drupal::service('license_service.seat_cap');
+  $cap     = \Drupal::service('license_service.license_manager')->getEnvelope()['max_premium_users'];
+  if ($cap <= 0) {
+    // Unlimited.
+    return;
+  }
+
+  $original      = $user->original ?? NULL;
+  $originalRoles = $original ? $original->getRoles() : [];
+  $newRoles      = $user->getRoles();
+  $addedRoles    = array_diff($newRoles, $originalRoles);
+  $removedRoles  = array_diff($originalRoles, $newRoles);
+
+  // When a premium role is being explicitly removed (demotion), revoke the LVS
+  // grant immediately so the seat returns to the pool. Clear cache either way.
+  $premiumRemoved = array_filter($removedRoles, [$seatCap, 'isPremiumRole']);
+  if (!empty($premiumRemoved)) {
+    /** @var \Drupal\license_service\LicenseClient $licenseClient */
+    $licenseClient = \Drupal::service('license_service.license_client');
+    $licenseClient->revokeUser((string) $user->id());
+    $seatCap->clearGrantCache((string) $user->id());
+  }
+
+  // Only premium additions need the seat-cap gate.
+  $premiumAdded = array_filter($addedRoles, [$seatCap, 'isPremiumRole']);
+  if (empty($premiumAdded)) {
+    return;
+  }
+
+  // Serialize the count-then-assign check against concurrent assignments. The
+  // lock is released after the save commits (hook_user_insert/update) so the
+  // check and the DB write are atomic. If we cannot get the lock, fall through
+  // and still enforce — a single-threaded check is safer than skipping it.
+  $locked = $seatCap->acquireSeatLock();
+  $user->license_service_seat_locked = $locked;
+
+  foreach ($premiumAdded as $roleId) {
+    if (!$seatCap->mayAssignRole($user, $roleId)) {
+      $user->removeRole($roleId);
+      \Drupal::messenger()->addWarning(t(
+        'Your account could not be granted premium access because the site license limit has been reached. Please contact the site administrator.',
+      ));
+      \Drupal::logger('license_service')->warning(
+        'Seat cap exceeded: role @role not assigned to uid @uid (cap: @cap)',
+        ['@role' => $roleId, '@uid' => $user->id(), '@cap' => $cap],
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_user_insert().
+ *
+ * Releases the seat-assignment lock acquired in hook_user_presave once the
+ * user write has committed.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_user_insert(UserInterface $user): void {
+  license_service_release_seat_lock($user);
+}
+
+/**
+ * Implements hook_user_update().
+ *
+ * Releases the seat-assignment lock acquired in hook_user_presave once the
+ * user write has committed.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_user_update(UserInterface $user): void {
+  license_service_release_seat_lock($user);
+}
+
+/**
+ * Releases the seat-assignment lock if this save acquired it.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_release_seat_lock(UserInterface $user): void {
+  if (!empty($user->license_service_seat_locked)) {
+    \Drupal::service('license_service.seat_cap')->releaseSeatLock();
+    unset($user->license_service_seat_locked);
+  }
+}
+
+/**
+ * Implements hook_user_delete().
+ *
+ * Releases the user's LVS per-user license grant when their Drupal account is
+ * deleted, returning the seat to the pool so it can be assigned to another user.
+ * Also clears any cached grant decision for that UID.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_user_delete(UserInterface $user): void {
+  /** @var \Drupal\license_service\LicenseClient $licenseClient */
+  $licenseClient = \Drupal::service('license_service.license_client');
+  $licenseClient->revokeUser((string) $user->id());
+
+  /** @var \Drupal\license_service\SeatCapService $seatCap */
+  $seatCap = \Drupal::service('license_service.seat_cap');
+  $seatCap->clearGrantCache((string) $user->id());
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Triggers the periodic license re-check and server heartbeat.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_cron(): void {
+  /** @var \Drupal\license_service\LicenseClient $client */
+  $client = \Drupal::service('license_service.license_client');
+  $client->cronRecheck();
+}
