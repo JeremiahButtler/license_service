@@ -474,9 +474,10 @@ class SeatCapServiceTest extends TestCase {
    * @covers ::clearGrantCache
    */
   public function testClearGrantCacheInvalidatesUserTag(): void {
-    $cache = $this->getMockBuilder(CacheBackendInterface::class)
-      ->addMethods(['invalidateTags'])
-      ->getMock();
+    // Drupal cache services implement both CacheBackendInterface and
+    // CacheTagsInvalidatorInterface. CombinedCacheInterface merges both so
+    // createMock() stubs all required methods including invalidateTags().
+    $cache = $this->createMock(CombinedCacheInterface::class);
     $cache->expects($this->once())->method('invalidateTags')->with(['lvs_grant:99']);
 
     $svc = $this->buildService(cache: $cache);
