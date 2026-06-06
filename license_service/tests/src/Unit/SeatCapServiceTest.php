@@ -40,12 +40,14 @@ class SeatCapServiceTest extends TestCase {
    * @param array $lvsResponse Return value of LicenseClient::authorizeUser().
    * @param \Drupal\Core\Lock\LockBackendInterface|null $lock Optional pre-built lock mock.
    * @param \Drupal\Core\Cache\CacheBackendInterface|null $cache Optional pre-built cache mock.
+   * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface|null $cacheTagsInvalidator Optional mock.
    */
   private function buildService(
     array $roleLevels = [],
     array $lvsResponse = ['status' => 'granted'],
     ?LockBackendInterface $lock = NULL,
     ?CacheBackendInterface $cache = NULL,
+    ?CacheTagsInvalidatorInterface $cacheTagsInvalidator = NULL,
   ): SeatCapService {
     $roleLevelsConfig = $this->createMock(Config::class);
     $roleLevelsConfig->method('get')->with('role_levels')->willReturn($roleLevels);
@@ -72,6 +74,7 @@ class SeatCapServiceTest extends TestCase {
       $entityTypeManager,
       $lock ?? $this->buildLock(firstAcquire: TRUE),
       $cache ?? $this->buildEmptyCache(),
+      $cacheTagsInvalidator ?? $this->createMock(CacheTagsInvalidatorInterface::class),
     );
   }
 
@@ -111,10 +114,10 @@ class SeatCapServiceTest extends TestCase {
    * Builds a stubbed AccountInterface for the given UID with optional roles.
    */
   private function buildAccount(int $uid = 42, bool $isAdmin = FALSE, string $email = 'u@example.com'): AccountInterface {
-    $account = $this->createMock(AccountWithRolesInterface::class);
+    $account = $this->createMock(AccountInterface::class);
     $account->method('id')->willReturn($uid);
     $account->method('getEmail')->willReturn($email);
-    $account->method('hasRole')->with('administrator')->willReturn($isAdmin);
+    $account->method('getRoles')->willReturn($isAdmin ? ['authenticated', 'administrator'] : ['authenticated']);
     return $account;
   }
 
@@ -223,6 +226,7 @@ class SeatCapServiceTest extends TestCase {
       $this->createMock(EntityTypeManagerInterface::class),
       $this->buildLock(),
       $cache,
+      $this->createMock(CacheTagsInvalidatorInterface::class),
     );
 
     $this->assertTrue($svc->mayAssignRole($this->buildAccount(), 'premium'));
@@ -255,6 +259,7 @@ class SeatCapServiceTest extends TestCase {
       $this->createMock(EntityTypeManagerInterface::class),
       $this->buildLock(),
       $cache,
+      $this->createMock(CacheTagsInvalidatorInterface::class),
     );
 
     $this->assertFalse($svc->mayAssignRole($this->buildAccount(), 'premium'));
@@ -474,33 +479,12 @@ class SeatCapServiceTest extends TestCase {
    * @covers ::clearGrantCache
    */
   public function testClearGrantCacheInvalidatesUserTag(): void {
-    // Drupal cache services implement both CacheBackendInterface and
-    // CacheTagsInvalidatorInterface. CombinedCacheInterface merges both so
-    // createMock() stubs all required methods including invalidateTags().
-    $cache = $this->createMock(CombinedCacheInterface::class);
-    $cache->expects($this->once())->method('invalidateTags')->with(['lvs_grant:99']);
+    $invalidator = $this->createMock(CacheTagsInvalidatorInterface::class);
+    $invalidator->expects($this->once())->method('invalidateTags')->with(['lvs_grant:99']);
 
-    $svc = $this->buildService(cache: $cache);
+    $svc = $this->buildService(cacheTagsInvalidator: $invalidator);
     $svc->clearGrantCache('99');
   }
 
 }
 
-/**
- * Combined interface for mocking cache objects that support tag invalidation.
- *
- * Drupal cache backend services implement both CacheBackendInterface and
- * CacheTagsInvalidatorInterface. This interface merges both so a single
- * createMock() call stubs all required methods, including invalidateTags().
- */
-interface CombinedCacheInterface extends CacheBackendInterface, CacheTagsInvalidatorInterface {}
-
-/**
- * Extended account interface for tests that need hasRole() on an AccountInterface mock.
- *
- * AccountInterface declares getRoles() but not hasRole(). SeatCapService calls
- * hasRole() on its AccountInterface parameter, so the test mock must support it.
- */
-interface AccountWithRolesInterface extends AccountInterface {
-  public function hasRole(string $rid): bool;
-}

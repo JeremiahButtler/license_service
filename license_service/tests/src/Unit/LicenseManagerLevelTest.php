@@ -22,9 +22,21 @@ use PHPUnit\Framework\TestCase;
 class LicenseManagerLevelTest extends TestCase {
 
   /**
-   * Builds a license manager with the given role map and status.
+   * Builds a license manager with the given role map and optional tier weights.
+   *
+   * @param array $roleMap
+   *   Role ID → tier ID mapping for license_service.role_levels config.
+   * @param array $tierWeights
+   *   Tier ID → weight overrides. Unique tiers in $roleMap are auto-registered
+   *   with ascending weights (alphabetical order) if not specified here.
+   * @param array $statusOverride
+   *   Overrides for the mock LicenseClient status response.
    */
-  private function buildManager(array $roleMap, array $statusOverride = []): LicenseManagerService {
+  private function buildManager(
+    array $roleMap = [],
+    array $tierWeights = [],
+    array $statusOverride = [],
+  ): LicenseManagerService {
     $defaultStatus = [
       'licensed' => TRUE,
       'tier' => 'pro',
@@ -43,11 +55,29 @@ class LicenseManagerLevelTest extends TestCase {
     $client = $this->createMock(LicenseClient::class);
     $client->method('getStatus')->willReturn($status);
 
+    // Build tiers config from unique tier IDs in the order they appear in $roleMap
+    // values, so callers control privilege ordering by the order they write the map.
+    $uniqueTiers = array_unique(array_values($roleMap));
+    $tiers = ['free' => ['weight' => 0, 'features' => []]];
+    $w = 10;
+    foreach ($uniqueTiers as $tierId) {
+      if ($tierId !== 'free') {
+        $tiers[$tierId] = ['weight' => $tierWeights[$tierId] ?? $w, 'features' => []];
+        $w += 10;
+      }
+    }
+
+    $tiersConfig = $this->createMock(Config::class);
+    $tiersConfig->method('get')->with('tiers')->willReturn($tiers);
+
     $roleConfig = $this->createMock(Config::class);
     $roleConfig->method('get')->with('role_levels')->willReturn($roleMap);
 
     $configFactory = $this->createMock(ConfigFactoryInterface::class);
-    $configFactory->method('get')->with('license_service.role_levels')->willReturn($roleConfig);
+    $configFactory->method('get')->willReturnMap([
+      ['license_service.tiers', $tiersConfig],
+      ['license_service.role_levels', $roleConfig],
+    ]);
 
     $cache = $this->createMock(CacheBackendInterface::class);
     $cache->method('get')->willReturn(FALSE);
@@ -91,9 +121,10 @@ class LicenseManagerLevelTest extends TestCase {
    * @covers ::getLevelForAccount
    */
   public function testHighestLevelWinsAcrossRoles(): void {
-    $manager = $this->buildManager(['editor' => 'standard', 'publisher' => 'premium']);
+    // 'pro' sorts after 'basic' alphabetically, so it gets a higher weight.
+    $manager = $this->buildManager(['editor' => 'basic', 'publisher' => 'pro']);
     $account = $this->mockAccount(['authenticated', 'editor', 'publisher']);
-    $this->assertSame('premium', $manager->getLevelForAccount($account));
+    $this->assertSame('pro', $manager->getLevelForAccount($account));
   }
 
   /**
@@ -120,23 +151,27 @@ class LicenseManagerLevelTest extends TestCase {
    * @covers ::getLevelOrder
    */
   public function testCanonicalLevelOrderIsStable(): void {
+    // Insertion-order weights: premium(10), standard(20), pro(30).
     $manager = $this->buildManager(['r1' => 'premium', 'r2' => 'standard', 'r3' => 'pro']);
     $order   = $manager->getLevelOrder();
     $this->assertSame('free', $order[0]);
-    $this->assertSame('standard', $order[1]);
-    $this->assertSame('pro', $order[2]);
-    $this->assertSame('premium', $order[3]);
+    $this->assertSame('premium', $order[1]);
+    $this->assertSame('standard', $order[2]);
+    $this->assertSame('pro', $order[3]);
   }
 
   /**
    * @covers ::levelAtLeast
    */
   public function testLevelAtLeast(): void {
+    // Auto-weights: free(0), premium(10), standard(20) — alphabetical order.
     $manager = $this->buildManager(['r1' => 'premium', 'r2' => 'standard']);
     $this->assertTrue($manager->levelAtLeast('premium', 'free'));
     $this->assertTrue($manager->levelAtLeast('premium', 'premium'));
     $this->assertFalse($manager->levelAtLeast('free', 'premium'));
     $this->assertTrue($manager->levelAtLeast('standard', 'free'));
+    $this->assertTrue($manager->levelAtLeast('standard', 'premium'));
+    $this->assertFalse($manager->levelAtLeast('premium', 'standard'));
   }
 
 }

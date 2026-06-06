@@ -152,12 +152,28 @@ class LicenseFeatureProviderTest extends TestCase {
     $client = $this->createMock(LicenseClient::class);
     $client->method('getStatus')->willReturn($status);
 
+    // Build tiers config in insertion order (first tier encountered = lowest weight).
+    $uniqueTiers = array_unique(array_values($roleMap));
+    $tiers = ['free' => ['weight' => 0, 'features' => []]];
+    $w = 10;
+    foreach ($uniqueTiers as $tierId) {
+      if ($tierId !== 'free') {
+        $tiers[$tierId] = ['weight' => $w, 'features' => []];
+        $w += 10;
+      }
+    }
+
+    $tiersConfig = $this->createMock(ImmutableConfig::class);
+    $tiersConfig->method('get')->with('tiers')->willReturn($tiers);
+
     $roleConfig = $this->createMock(ImmutableConfig::class);
     $roleConfig->method('get')->with('role_levels')->willReturn($roleMap);
 
     $configFactory = $this->createMock(ConfigFactoryInterface::class);
-    $configFactory->method('get')
-      ->willReturnMap([['license_service.role_levels', $roleConfig]]);
+    $configFactory->method('get')->willReturnMap([
+      ['license_service.tiers', $tiersConfig],
+      ['license_service.role_levels', $roleConfig],
+    ]);
 
     $cache = $this->createMock(CacheBackendInterface::class);
     $cache->method('get')->willReturn(FALSE);
@@ -223,8 +239,8 @@ class LicenseFeatureProviderTest extends TestCase {
     $provider = $this->buildProviderWithRoles(['editor' => 'standard']);
     $envelope = $provider->getEnvelope();
     $this->assertArrayHasKey('quotas', $envelope);
-    // Default: quotas flag is TRUE for a licensed site with no override.
-    $this->assertTrue($envelope['quotas']);
+    // quotas is FALSE when no tier has the feature enabled.
+    $this->assertFalse($envelope['quotas']);
   }
 
 }
