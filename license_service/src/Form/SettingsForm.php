@@ -121,6 +121,12 @@ class SettingsForm extends ConfigFormBase {
       ];
     }
 
+    // ---- Terms acceptance --------------------------------------------------
+    $form['key_section']['terms_accept'] = [
+      '#type'  => 'checkbox',
+      '#title' => $this->t('I accept the <a href="https://www.licenseverificationserver.com/terms" target="_blank" rel="noopener noreferrer">terms and conditions</a> of usage'),
+    ];
+
     // ---- Activate / Deactivate buttons ------------------------------------
     $form['key_section']['actions_key'] = [
       '#type' => 'container',
