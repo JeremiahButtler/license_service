@@ -29,6 +29,7 @@ class LicenseManagerService {
     protected readonly LicenseClient $licenseClient,
     protected readonly ConfigFactoryInterface $configFactory,
     protected readonly CacheBackendInterface $cache,
+    protected readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator,
   ) {}
 
   /**
