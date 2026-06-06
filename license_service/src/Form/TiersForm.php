@@ -174,7 +174,6 @@ class TiersForm extends ConfigFormBase {
     }
 
     // ---- Add tier form -------------------------------------------------------
-
     $form['tiers_wrap']['add_header'] = [
       '#markup' => '<h3>' . $this->t('Add a tier') . '</h3>',
     ];
@@ -237,8 +236,8 @@ class TiersForm extends ConfigFormBase {
       return;
     }
 
-    $label           = (string) ($form_state->getValue('new_tier_label') ?: ucfirst($id));
-    $tiers[$id]      = $this->defaultTier($label, count($tiers) * 10);
+    $label      = (string) ($form_state->getValue('new_tier_label') ?: ucfirst($id));
+    $tiers[$id] = $this->defaultTier($label, count($tiers) * 10);
     $form_state->set('tiers', $tiers);
     $form_state->setRebuild(TRUE);
   }

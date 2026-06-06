@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 /**
  * Redirects the legacy token-limits route to the TokenLimit entity collection.
  *
- * Author: Jeremiah Buttler
+ * Author: Jeremiah Buttler.
  */
 class TokenLimitsRedirectController extends ControllerBase {
 

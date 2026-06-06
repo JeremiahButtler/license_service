@@ -118,7 +118,8 @@ class LicenseManagerService {
     return [
       'allowed_levels'   => $this->getLevelOrder(),
       'authorized_users' => $authorizedUsers,
-      'max_premium_users' => $authorizedUsers,  // backward-compat alias
+    // backward-compat alias.
+      'max_premium_users' => $authorizedUsers,
       'field_gating'     => $anyFeature('field_gating'),
       'download_gating'  => $anyFeature('download_gating'),
       'metered_views'    => $anyFeature('metered_views'),
@@ -217,4 +218,3 @@ class LicenseManagerService {
   }
 
 }
-
