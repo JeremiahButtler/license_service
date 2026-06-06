@@ -6,9 +6,12 @@ namespace Drupal\Tests\license_service\Unit;
 
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Routing\UrlGeneratorInterface;
 use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\license_service\EventSubscriber\EnforcementSubscriber;
 use Drupal\license_service\LicenseManagerService;
 use PHPUnit\Framework\TestCase;
