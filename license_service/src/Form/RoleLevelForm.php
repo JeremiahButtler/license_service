@@ -56,34 +56,25 @@ class RoleLevelForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
-    $config        = $this->config('license_service.role_levels');
-    $roleMap       = (array) ($config->get('role_levels') ?? []);
-    $envelope      = $this->licenseManager->getEnvelope();
-    $allowedLevels = $envelope['allowed_levels'];
+    $config  = $this->config('license_service.role_levels');
+    $roleMap = (array) ($config->get('role_levels') ?? []);
+    $levels  = $this->licenseManager->getLevelOrder();
 
-    // Explain any license restriction.
-    if (!$this->licenseManager->isLicensed()) {
-      $form['notice'] = [
-        '#markup' => '<div class="messages messages--warning">'
-        . $this->t('The site license is not active. Only the <em>free</em> level is available. Activate the license to unlock additional levels.')
-        . '</div>',
-      ];
-    }
-
-    // Level options: free is always available; others depend on the envelope.
-    $levelOptions = $this->buildLevelOptions($allowedLevels);
-
-    // Build a row per role (skip 'anonymous' and 'authenticated' system roles
-    // from the drop-down but show them for informational purposes).
-    $roles = $this->roleStorage->loadMultiple();
-    $rows  = [];
-
-    $form['role_levels'] = [
-      '#type'  => 'table',
-      '#caption' => $this->t('Assign a license level to each role. A user\'s effective level is the highest across all their roles.'),
-      '#header' => [$this->t('Role'), $this->t('License level'), $this->t('Notes')],
+    $form['intro'] = [
+      '#markup' => '<p>' . $this->t(
+        'Assign a license tier to each role. A user\'s effective tier is the highest across all their roles. Define tiers and their included features on the <a href="/admin/config/license-service/tiers">License Tiers</a> page.'
+      ) . '</p>',
     ];
 
+    $levelOptions = $this->buildLevelOptions($levels);
+
+    $form['role_levels'] = [
+      '#type'    => 'table',
+      '#caption' => $this->t('Role to tier assignments'),
+      '#header'  => [$this->t('Role'), $this->t('License tier'), $this->t('Notes')],
+    ];
+
+    $roles = $this->roleStorage->loadMultiple();
     foreach ($roles as $roleId => $role) {
       $current = (string) ($roleMap[$roleId] ?? 'free');
 
@@ -99,9 +90,7 @@ class RoleLevelForm extends ConfigFormBase {
       $form['role_levels'][$roleId]['level'] = [
         '#type'          => 'select',
         '#options'       => $levelOptions,
-        '#default_value' => in_array($current, $allowedLevels, TRUE) ? $current : 'free',
-        // Use #parents (not an #attributes name override) so the submitted
-        // value maps to $form_state->getValue('role_levels')[$roleId]['level'].
+        '#default_value' => in_array($current, $levels, TRUE) ? $current : 'free',
         '#parents'       => ['role_levels', $roleId, 'level'],
       ];
 
@@ -110,39 +99,18 @@ class RoleLevelForm extends ConfigFormBase {
       ];
     }
 
-    // Seat cap information.
-    $maxSeats = $envelope['max_premium_users'];
-    if ($maxSeats > 0) {
+    // Show authorized-user count from the LVS plan (informational only).
+    $authorizedUsers = $this->licenseManager->getEnvelope()['authorized_users'];
+    if ($authorizedUsers > 0) {
       $form['seat_cap_note'] = [
         '#markup' => '<p>' . $this->t(
-          'Your license allows a maximum of @cap premium-level users. Assignment will be blocked when the cap is reached.',
-          ['@cap' => $maxSeats],
+          'Your plan authorizes a maximum of @cap non-free users. Authorization is enforced per user by the License Verification Server.',
+          ['@cap' => $authorizedUsers],
         ) . '</p>',
       ];
     }
 
     return parent::buildForm($form, $form_state);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validateForm(array &$form, FormStateInterface $form_state): void {
-    $envelope      = $this->licenseManager->getEnvelope();
-    $allowedLevels = $envelope['allowed_levels'];
-    $roleLevels    = $form_state->getValue('role_levels', []);
-
-    foreach ($roleLevels as $roleId => $entry) {
-      $level = (string) ($entry['level'] ?? 'free');
-      if (!in_array($level, $allowedLevels, TRUE)) {
-        $form_state->setErrorByName(
-          "role_levels][{$roleId}][level",
-          $this->t('The level "@level" is not permitted by your site license.', ['@level' => $level])
-        );
-      }
-    }
-
-    parent::validateForm($form, $form_state);
   }
 
   /**
