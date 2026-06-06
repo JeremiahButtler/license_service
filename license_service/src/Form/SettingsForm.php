@@ -196,15 +196,6 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength'     => 255,
     ];
 
-    $form['server']['offline_grace_hours'] = [
-      '#type'          => 'number',
-      '#title'         => $this->t('Offline grace period (hours)'),
-      '#default_value' => $config->get('offline_grace_hours') ?? 24,
-      '#min'           => 1,
-      '#max'           => 720,
-      '#description'   => $this->t('How long the site license remains valid when the verification server cannot be reached. Default: 24 hours.'),
-    ];
-
     $form['server']['expiry_warning_days'] = [
       '#type'          => 'number',
       '#title'         => $this->t('Expiry warning (days before)'),
