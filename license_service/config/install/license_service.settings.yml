@@ -1,7 +1,6 @@
 server_url: 'https://www.licenseverificationserver.com'
 key_provider: 'config'
 key_id: ''
-offline_grace_hours: 24
 expiry_warning_days: 7
 enforcement_enabled: false
 enforcement_mode: 'warn_only'
