@@ -247,11 +247,6 @@ class SettingsForm extends ConfigFormBase {
       $form_state->setErrorByName('server_url', $this->t('The license server URL must start with https://.'));
     }
 
-    $grace = $form_state->getValue('offline_grace_hours');
-    if (!is_numeric($grace) || (int) $grace < 1) {
-      $form_state->setErrorByName('offline_grace_hours', $this->t('Offline grace must be at least 1 hour.'));
-    }
-
     parent::validateForm($form, $form_state);
   }
 
