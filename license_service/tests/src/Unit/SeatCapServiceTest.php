@@ -201,7 +201,10 @@ class SeatCapServiceTest extends TestCase {
   public function testCacheHitGrantedSkipsLvs(): void {
     $cache = $this->buildCacheWithEntry(TRUE);
 
-    $licenseClient = $this->createMock(LicenseClient::class);
+    $licenseClient = $this->getMockBuilder(LicenseClient::class)
+      ->disableOriginalConstructor()
+      ->onlyMethods(['authorizeUser'])
+      ->getMock();
     $licenseClient->expects($this->never())->method('authorizeUser');
 
     $roleLevelsConfig = $this->createMock(Config::class);
