@@ -3,6 +3,7 @@
 namespace Drupal\license_service;
 
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
@@ -48,6 +49,7 @@ class SeatCapService {
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly LockBackendInterface $lock,
     protected readonly CacheBackendInterface $grantCache,
+    protected readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator,
   ) {}
 
   /**
@@ -156,7 +158,7 @@ class SeatCapService {
    *   The Drupal UID as a string.
    */
   public function clearGrantCache(string $uid): void {
-    $this->grantCache->invalidateTags(['lvs_grant:' . $uid]);
+    $this->cacheTagsInvalidator->invalidateTags(['lvs_grant:' . $uid]);
   }
 
   /**

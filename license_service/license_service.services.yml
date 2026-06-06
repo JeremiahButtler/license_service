@@ -75,6 +75,7 @@ services:
       - '@entity_type.manager'
       - '@lock'
       - '@cache.lvs_user_grants'
+      - '@cache_tags.invalidator'
 
   license_service.enforcement_subscriber:
     class: Drupal\license_service\EventSubscriber\EnforcementSubscriber
