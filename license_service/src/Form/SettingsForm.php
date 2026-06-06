@@ -260,7 +260,6 @@ class SettingsForm extends ConfigFormBase {
     $config
       ->set('key_provider', $provider)
       ->set('server_url', trim($form_state->getValue('server_url', LicenseClient::DEFAULT_SERVER_URL)))
-      ->set('offline_grace_hours', (int) $form_state->getValue('offline_grace_hours', 24))
       ->set('expiry_warning_days', (int) $form_state->getValue('expiry_warning_days', 7))
       ->set('enforcement_enabled', (bool) $form_state->getValue('enforcement_enabled', FALSE))
       ->set('enforcement_mode', $form_state->getValue('enforcement_mode', 'warn_only'));
