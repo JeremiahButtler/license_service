@@ -216,34 +216,5 @@ class LicenseManagerService {
     $this->cacheTagsInvalidator->invalidateTags(['license_service']);
   }
 
-  // --------------------------------------------------------------------------
-  // Private helpers
-  // --------------------------------------------------------------------------
-
-  /**
-   * Returns the allowed level count and names for a given tier.
-   *
-   * Standard mapping: free=1 level, standard/pro=2, premium=3, enterprise=unlimited.
-   * The actual level names are the ones already configured by the admin — this just
-   * controls how many rows the RoleLevelForm may show.
-   */
-  protected function tieredLevels(string $tier): array {
-    // The feature flag 'allowed_level_count' can override the tier default.
-    $featureCount = $this->getFeature('allowed_level_count');
-    $maxLevels = match($tier) {
-      'free'       => 1,
-      'standard'   => 2,
-      'pro'        => 3,
-      'premium'    => 4,
-      'enterprise' => PHP_INT_MAX,
-      default      => 2,
-    };
-    if ($featureCount !== NULL) {
-      $maxLevels = max(1, (int) $featureCount);
-    }
-
-    // Return up to $maxLevels from the configured level order.
-    return array_slice($this->getLevelOrder(), 0, $maxLevels);
-  }
-
 }
+
