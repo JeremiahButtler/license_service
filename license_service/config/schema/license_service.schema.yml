@@ -11,9 +11,6 @@ license_service.settings:
     key_id:
       type: string
       label: 'Key module key ID (when key_provider is key_module)'
-    offline_grace_hours:
-      type: integer
-      label: 'Hours the module keeps running when the server is unreachable'
     expiry_warning_days:
       type: integer
       label: 'Days before expiry to start showing warnings'
