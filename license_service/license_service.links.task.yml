@@ -4,6 +4,12 @@ license_service.settings.tab:
   base_route: license_service.settings
   weight: -10
 
+license_service.tiers.tab:
+  route_name: license_service.tiers
+  title: 'License Tiers'
+  base_route: license_service.settings
+  weight: -5
+
 license_service.role_levels.tab:
   route_name: license_service.role_levels
   title: 'Role Levels'
