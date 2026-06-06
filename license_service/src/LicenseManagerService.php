@@ -172,41 +172,31 @@ class LicenseManagerService {
   }
 
   /**
-   * Returns the ordered list of known levels from config, lowest first.
+   * Returns the tenant-defined tier IDs in ascending privilege order.
    *
-   * The order is the unique, stable list of all levels used in the role→level
-   * mapping, sorted so that 'free' is always first (rank 0). The admin defines
-   * levels implicitly by assigning them to roles in the RoleLevelForm.
+   * The order is driven entirely by the weight values set in the License Tiers
+   * editor (license_service.tiers config). The LVS has no say in which tiers
+   * exist or how they are ordered. 'free' is always present as the baseline.
    *
    * @return string[]
-   *   The ordered list of known level names, lowest privilege first.
+   *   Tier IDs sorted by weight (ascending), lowest privilege first.
    */
   public function getLevelOrder(): array {
-    $roleMap = $this->configFactory->get('license_service.role_levels')->get('role_levels') ?? [];
-    if (!is_array($roleMap)) {
+    $tiers = (array) ($this->configFactory->get('license_service.tiers')->get('tiers') ?? []);
+
+    if (empty($tiers)) {
       return ['free'];
     }
 
-    // Collect unique levels; 'free' is always present and first.
-    $levels = ['free'];
-    foreach ($roleMap as $level) {
-      $level = (string) $level;
-      if ($level !== '' && !in_array($level, $levels, TRUE)) {
-        $levels[] = $level;
-      }
-    }
+    // Sort by weight ascending.
+    uasort($tiers, static fn($a, $b) => ($a['weight'] ?? 0) <=> ($b['weight'] ?? 0));
 
-    // Sort deterministically: free first, then by predefined tier ordering,
-    // then lexicographically for custom level names.
-    $canonical = ['free' => 0, 'standard' => 1, 'pro' => 2, 'premium' => 3, 'enterprise' => 4];
-    usort($levels, static function (string $a, string $b) use ($canonical): int {
-      $ra = $canonical[$a] ?? 99;
-      $rb = $canonical[$b] ?? 99;
-      if ($ra !== $rb) {
-        return $ra <=> $rb;
-      }
-      return $a <=> $b;
-    });
+    $levels = array_keys($tiers);
+
+    // Guarantee 'free' is always present.
+    if (!in_array('free', $levels, TRUE)) {
+      array_unshift($levels, 'free');
+    }
 
     return $levels;
   }
