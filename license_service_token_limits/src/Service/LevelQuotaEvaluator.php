@@ -19,7 +19,7 @@ use Drupal\license_service_token_counter\Service\UsageAggregatorInterface;
  *
  * Author: Jeremiah Buttler.
  */
-final class LevelQuotaEvaluator {
+class LevelQuotaEvaluator {
 
   /**
    * Config object name for this module's settings.
