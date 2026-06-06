@@ -137,28 +137,12 @@ class RoleLevelForm extends ConfigFormBase {
   // --------------------------------------------------------------------------
 
   /**
-   * Builds the level select options, marking unavailable levels as disabled.
+   * Builds select options from all tenant-defined tiers.
    */
-  protected function buildLevelOptions(array $allowedLevels): array {
-    // Always include all known levels; disable those not in the envelope.
-    $allLevels = $this->licenseManager->getLevelOrder();
-
-    // Ensure at least a reasonable set of named levels is offered.
-    foreach (['standard', 'premium', 'enterprise'] as $extra) {
-      if (!in_array($extra, $allLevels, TRUE)) {
-        $allLevels[] = $extra;
-      }
-    }
-
+  protected function buildLevelOptions(array $levels): array {
     $options = [];
-    foreach ($allLevels as $level) {
-      if (in_array($level, $allowedLevels, TRUE)) {
-        $options[$level] = ucfirst($level);
-      }
-      else {
-        // Show but disable levels not in the envelope so the admin knows they exist.
-        $options[$level] = $this->t('@level (requires license upgrade)', ['@level' => ucfirst($level)]);
-      }
+    foreach ($levels as $level) {
+      $options[$level] = ucfirst($level);
     }
     return $options;
   }
