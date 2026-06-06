@@ -100,7 +100,7 @@ class StatusController extends ControllerBase {
     // License features from the envelope.
     $build['envelope_title'] = ['#markup' => '<h3>' . $this->t('License capabilities') . '</h3>'];
     $featRows = [];
-    $featRows[] = [$this->t('Allowed levels'), implode(', ', $envelope['allowed_levels'])];
+    $featRows[] = [$this->t('Configured tiers'), implode(', ', $envelope['allowed_levels'])];
     $featRows[] = [$this->t('Field gating'), $envelope['field_gating'] ? $this->t('Enabled') : $this->t('Disabled')];
     $featRows[] = [
       $this->t('Download gating'),
