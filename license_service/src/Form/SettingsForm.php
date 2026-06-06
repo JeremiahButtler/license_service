@@ -307,6 +307,10 @@ class SettingsForm extends ConfigFormBase {
         $form_state->setErrorByName('license_key', $this->t('Enter a license key to activate.'));
       }
     }
+
+    if (!$form_state->getValue('terms_accept')) {
+      $form_state->setErrorByName('terms_accept', $this->t('You must accept the terms and conditions before activating.'));
+    }
   }
 
   /**
