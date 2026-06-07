@@ -1,0 +1,41 @@
+parameters:
+    level: 6
+    paths:
+        - src
+    # mglaman/phpstan-drupal is loaded automatically by phpstan/extension-installer.
+    # The Drupal root is discovered from the analysed module path.
+
+    ignoreErrors:
+        # Bare `array` types mirror Drupal core API signatures (render arrays, etc.).
+        - message: '#no value type specified in iterable type array#'
+          identifier: missingType.iterableValue
+
+        # \Drupal:: calls at service/bootstrap boundaries are intentional.
+        - message: '#\\Drupal calls should be avoided in classes#'
+          identifier: globalDrupalDependencyInjection.useDependencyInjection
+
+        # new static() in ContainerInjectionInterface::create() is the Drupal DI idiom.
+        - message: '#Unsafe usage of new static\(\)#'
+          identifier: new.static
+
+        # GuzzleHttp\ClientInterface exposes get()/post() via __call magic.
+        - message: '#Call to an undefined method GuzzleHttp\\ClientInterface::(get|post)\(\)#'
+          identifier: method.notFound
+
+        # AccessResult concrete class carries cache methods the interface does not declare.
+        - message: '#Call to an undefined method Drupal\\Core\\Access\\AccessResultInterface::(addCacheContexts|addCacheTags)\(\)#'
+          identifier: method.notFound
+
+        # drupal/key is an optional contrib dependency.
+        - message: '#Drupal\\key\\KeyRepositoryInterface#'
+
+        # FieldItemListInterface is unparameterised in hook_entity_field_access().
+        - message: '#with generic interface Drupal\\Core\\Field\\FieldItemListInterface but does not specify its types#'
+          identifier: missingType.generics
+
+        # Drupal's create() factory pattern assigns injected services via $instance->prop = $container->get().
+        # PHPStan cannot track property assignments made outside __construct(), so it falsely reports
+        # that the non-null branch of a nullable type is never assigned.
+        - message: '#is never assigned Drupal\\license_service#'
+          identifier: property.unusedType
+          path: src/Form/TiersForm.php
