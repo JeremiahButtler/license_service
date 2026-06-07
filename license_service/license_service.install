@@ -344,9 +344,12 @@ function _license_service_migrate_legacy_license_gate(): void {
 }
 
 /**
- * Merges the five default tiers (no_access / free / basic / standard /
- * professional) into existing installs that were configured before these
- * defaults existed. Existing tenant-defined tiers are never overwritten.
+ * Merges the five default tiers into pre-existing installs.
+ *
+ * Adds no_access / free / basic / standard / professional into installs that
+ * were configured before these defaults existed. Existing tenant-defined tiers
+ * are never overwritten.
+ *
  * Author: Jeremiah Buttler.
  */
 function license_service_update_10001(): void {
