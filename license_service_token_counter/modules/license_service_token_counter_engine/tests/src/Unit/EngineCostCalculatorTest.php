@@ -11,6 +11,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryInterface;
 use Drupal\license_service_token_counter\Cost\CostResult;
 use Drupal\license_service_token_counter\Cost\UsageData;
+use Drupal\license_service_token_counter\License\LicenseContextInterface;
 use Drupal\license_service_token_counter_engine\Cost\EngineCostCalculator;
 use Drupal\license_service_token_counter_engine\Entity\PricingTableInterface;
 use Drupal\license_service_token_counter_engine\Pricing\PricingResolver;
@@ -76,9 +77,12 @@ final class EngineCostCalculatorTest extends UnitTestCase {
    *
    * @param array<string, PricingTableInterface> $tables  id => entity.
    */
-  private function calculator(array $tables, string $currency = 'USD'): EngineCostCalculator {
+  private function calculator(array $tables, string $currency = 'USD', bool $licenseActive = TRUE): EngineCostCalculator {
+    $license = $this->createMock(LicenseContextInterface::class);
+    $license->method('isActive')->willReturn($licenseActive);
     return new EngineCostCalculator(
       $this->pricing($tables, $currency),
+      $license,
     );
   }
 
