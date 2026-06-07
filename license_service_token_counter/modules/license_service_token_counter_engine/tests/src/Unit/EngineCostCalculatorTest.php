@@ -43,8 +43,10 @@ final class EngineCostCalculatorTest extends UnitTestCase {
   /**
    * Returns a PricingResolver backed by the given table entities.
    *
-   * @param array<string, PricingTableInterface> $tables  id => entity.
-   * @param string $currency  The display_currency setting value.
+   * @param array<string, PricingTableInterface> $tables
+   *   Map of pricing table id => entity.
+   * @param string $currency
+   *   The display_currency setting value.
    */
   private function pricing(array $tables, string $currency = 'USD'): PricingResolver {
     $query = $this->createMock(QueryInterface::class);
