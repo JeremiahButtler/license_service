@@ -1,6 +1,0 @@
-includes:
-    - phpstan.neon
-
-parameters:
-    stubFiles:
-        - phpstan-drupal-stubs.php
