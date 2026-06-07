@@ -42,8 +42,7 @@ class TiersForm extends ConfigFormBase {
    */
   public static function create(ContainerInterface $container): static {
     $instance = parent::create($container);
-    $service = $container->get('license_service.license_manager');
-    $instance->licenseManager = $service instanceof LicenseManagerService ? $service : NULL;
+    $instance->licenseManager = $container->get('license_service.license_manager');
     return $instance;
   }
 
