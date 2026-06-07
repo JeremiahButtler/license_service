@@ -138,7 +138,7 @@ class SettingsForm extends ConfigFormBase {
 
     // How to obtain and store the API key.
     $form['key_section']['intro'] = [
-      '#markup' => '<p>' . $this->t('This site connects to the License Verification Server with a <strong>tenant API key</strong>. To obtain it: sign in to your tenant portal on the <a href=":lvs" target="_blank" rel="noopener noreferrer">License Verification Server</a> and copy the API key shown for your site. Then store it in a <a href=":keys">Key</a> entity (choose a key type such as <em>Authentication</em>) and select that key below.', [
+      '#markup' => '<p>' . $this->t('This site connects to the License Verification Server with a <strong>tenant API key</strong>. To obtain it: sign in to your tenant portal on the <a href=":lvs" target="_blank" rel="noopener noreferrer">License Verification Server</a> and copy the API key shown for your site. Then store it in the <a href=":keys">Key module</a> (choose a key type such as <em>Authentication</em>) and select that key below.', [
         ':lvs'  => 'https://www.licenseverificationserver.com/',
         ':keys' => Url::fromUserInput('/admin/config/system/keys')->toString(),
       ]) . '</p>',
@@ -158,7 +158,7 @@ class SettingsForm extends ConfigFormBase {
         '#title'         => $this->t('API key'),
         '#options'       => $this->getKeyModuleOptions(),
         '#default_value' => $config->get('key_id') ?? '',
-        '#description'   => $this->t('Select the <a href=":keys">Key</a> that holds your tenant API key. <a href=":add">Add a key</a> if you have not created one yet.', [
+        '#description'   => $this->t('Select the <a href=":keys">Key module</a> key that holds your tenant API key. <a href=":add">Add a key</a> if you have not created one yet.', [
           ':keys' => Url::fromUserInput('/admin/config/system/keys')->toString(),
           ':add'  => Url::fromUserInput('/admin/config/system/keys/add')->toString(),
         ]),
