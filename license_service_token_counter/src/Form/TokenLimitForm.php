@@ -7,6 +7,7 @@ namespace Drupal\license_service_token_counter\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\license_service\LicenseFeatureProviderInterface;
 use Drupal\license_service_token_counter\Entity\TokenLimit;
 use Drupal\license_service_token_counter\Entity\TokenLimitInterface;
 use Drupal\license_service\Period\PeriodManager;
@@ -21,15 +22,24 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class TokenLimitForm extends EntityForm {
 
   /**
+   * The license feature provider, for resolving available levels.
+   */
+  private LicenseFeatureProviderInterface $licenseProvider;
+
+  /**
    * Constructs a TokenLimitForm.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager.
+   * @param \Drupal\license_service\LicenseFeatureProviderInterface $licenseProvider
+   *   The license feature provider, for the available level list.
    */
   public function __construct(
     EntityTypeManagerInterface $entityTypeManager,
+    LicenseFeatureProviderInterface $licenseProvider,
   ) {
     $this->entityTypeManager = $entityTypeManager;
+    $this->licenseProvider   = $licenseProvider;
   }
 
   /**
@@ -38,6 +48,7 @@ final class TokenLimitForm extends EntityForm {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('entity_type.manager'),
+      $container->get('license_service.manager'),
     );
   }
 
@@ -107,6 +118,24 @@ final class TokenLimitForm extends EntityForm {
       ],
     ];
 
+    $level_options = [];
+    foreach ($this->licenseProvider->getLevelOrder() as $level) {
+      $level_options[$level] = ucfirst($level);
+    }
+
+    $form['level_id'] = [
+      '#type' => 'select',
+      '#title' => $this->t('License level'),
+      '#description' => $this->t('The license level this limit applies to. Each user at this level gets their own independent limit.'),
+      '#options' => $level_options,
+      '#default_value' => $entity->getLevelId(),
+      '#empty_option' => $this->t('— choose a level —'),
+      '#states' => [
+        'visible' => [':input[name="scope_type"]' => ['value' => TokenLimitInterface::SCOPE_LEVEL]],
+        'required' => [':input[name="scope_type"]' => ['value' => TokenLimitInterface::SCOPE_LEVEL]],
+      ],
+    ];
+
     // ── Quota ─────────────────────────────────────────────────────────────────
     $form['amount'] = [
       '#type' => 'number',
@@ -142,6 +171,12 @@ final class TokenLimitForm extends EntityForm {
         $form_state->setErrorByName('role_id', $this->t('Please choose a role for this limit.'));
       }
     }
+    if ($scope === TokenLimitInterface::SCOPE_LEVEL) {
+      $level_id = (string) $form_state->getValue('level_id');
+      if ($level_id === '' || $level_id === '_none') {
+        $form_state->setErrorByName('level_id', $this->t('Please choose a license level for this limit.'));
+      }
+    }
 
     $amount = (int) $form_state->getValue('amount');
     if ($amount < 1) {
@@ -156,9 +191,12 @@ final class TokenLimitForm extends EntityForm {
     /** @var \Drupal\license_service_token_counter\Entity\TokenLimitInterface $entity */
     $entity = $this->entity;
 
-    // Clear role_id when the scope is not role-based.
+    // Clear scope-specific fields when their scope is not selected.
     if ($entity->getScopeType() !== TokenLimitInterface::SCOPE_ROLE) {
       $entity->set('role_id', '');
+    }
+    if ($entity->getScopeType() !== TokenLimitInterface::SCOPE_LEVEL) {
+      $entity->set('level_id', '');
     }
 
     $status = parent::save($form, $form_state);

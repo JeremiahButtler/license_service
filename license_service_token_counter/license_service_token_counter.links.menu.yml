@@ -1,7 +1,10 @@
 # Author: Jeremiah Buttler
+# When the license_service_token_limits bridge is installed, it places the
+# token counter in the License Service admin menu. This standalone entry exists
+# only for sites that run license_service_token_counter without the bridge.
 license_service_token_counter.settings:
   title: 'License Service Token Counter'
   description: 'Configure AI token usage capture, retention and cost display.'
-  parent: system.admin_config_system
+  parent: system.admin_config
   route_name: license_service_token_counter.settings
   weight: 10

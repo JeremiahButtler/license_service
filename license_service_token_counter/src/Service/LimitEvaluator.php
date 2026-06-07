@@ -160,6 +160,7 @@ final class LimitEvaluator {
       TokenLimitInterface::SCOPE_ROLE       => $account->hasRole($limit->getRoleId()),
       TokenLimitInterface::SCOPE_ALL_USERS  => TRUE,
       TokenLimitInterface::SCOPE_SITE_TOTAL => TRUE,
+      TokenLimitInterface::SCOPE_LEVEL      => $this->licenseContext->getLevelForAccount($account) === $limit->getLevelId(),
       default => FALSE,
     };
   }

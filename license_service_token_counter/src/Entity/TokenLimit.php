@@ -58,6 +58,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "weight",
  *     "scope_type",
  *     "role_id",
+ *     "level_id",
  *     "amount",
  *     "period",
  *   }
@@ -91,6 +92,11 @@ class TokenLimit extends ConfigEntityBase implements TokenLimitInterface {
   protected string $role_id = '';
 
   /**
+   * License level id (only used when scope_type = 'level').
+   */
+  protected string $level_id = '';
+
+  /**
    * Token limit amount. 0 means unlimited.
    */
   protected int $amount = 0;
@@ -108,6 +114,7 @@ class TokenLimit extends ConfigEntityBase implements TokenLimitInterface {
       self::SCOPE_ROLE        => 'Per role (each user in the role gets their own limit)',
       self::SCOPE_ALL_USERS   => 'All authenticated users (each user gets their own limit)',
       self::SCOPE_SITE_TOTAL  => 'Site total (a single shared pool for the entire site)',
+      self::SCOPE_LEVEL       => 'Per license level (each user at the chosen level gets their own limit)',
     ];
   }
 
@@ -123,6 +130,13 @@ class TokenLimit extends ConfigEntityBase implements TokenLimitInterface {
    */
   public function getRoleId(): string {
     return $this->role_id;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getLevelId(): string {
+    return $this->level_id;
   }
 
   /**

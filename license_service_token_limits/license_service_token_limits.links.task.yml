@@ -1,5 +1,28 @@
+# Primary tab: Token Limits (in the License Service primary nav)
 license_service_token_limits.settings.tab:
   route_name: license_service_token_limits.settings
   title: 'Token Limits'
   base_route: license_service.settings
   weight: 15
+
+# Secondary sub-tabs under Token Limits
+license_service_token_limits.limits.sub_tab:
+  route_name: license_service_token_limits.settings
+  title: 'Limits'
+  base_route: license_service.settings
+  parent_id: license_service_token_limits.settings.tab
+  weight: 0
+
+license_service_token_limits.token_settings.sub_tab:
+  route_name: license_service_token_limits.token_settings
+  title: 'Settings'
+  base_route: license_service.settings
+  parent_id: license_service_token_limits.settings.tab
+  weight: 5
+
+# Primary tab: Reports
+license_service_token_limits.reports.tab:
+  route_name: license_service_token_limits.reports
+  title: 'Reports'
+  base_route: license_service.settings
+  weight: 18

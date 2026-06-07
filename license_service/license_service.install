@@ -344,6 +344,87 @@ function _license_service_migrate_legacy_license_gate(): void {
 }
 
 /**
+ * Merges the five default tiers (no_access / free / basic / standard /
+ * professional) into existing installs that were configured before these
+ * defaults existed. Existing tenant-defined tiers are never overwritten.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_update_10001(): void {
+  $defaults = [
+    'no_access' => [
+      'label'    => 'No Access',
+      'weight'   => -20,
+      'features' => [
+        'field_gating'    => TRUE,
+        'download_gating' => TRUE,
+        'metered_views'   => TRUE,
+        'quotas'          => TRUE,
+        'content_access'  => TRUE,
+      ],
+    ],
+    'free' => [
+      'label'    => 'Free',
+      'weight'   => -10,
+      'features' => [
+        'field_gating'    => FALSE,
+        'download_gating' => FALSE,
+        'metered_views'   => FALSE,
+        'quotas'          => FALSE,
+        'content_access'  => FALSE,
+      ],
+    ],
+    'basic' => [
+      'label'    => 'Basic',
+      'weight'   => 0,
+      'features' => [
+        'field_gating'    => FALSE,
+        'download_gating' => FALSE,
+        'metered_views'   => FALSE,
+        'quotas'          => FALSE,
+        'content_access'  => TRUE,
+      ],
+    ],
+    'standard' => [
+      'label'    => 'Standard',
+      'weight'   => 10,
+      'features' => [
+        'field_gating'    => TRUE,
+        'download_gating' => FALSE,
+        'metered_views'   => FALSE,
+        'quotas'          => FALSE,
+        'content_access'  => TRUE,
+      ],
+    ],
+    'professional' => [
+      'label'    => 'Professional',
+      'weight'   => 20,
+      'features' => [
+        'field_gating'    => TRUE,
+        'download_gating' => TRUE,
+        'metered_views'   => TRUE,
+        'quotas'          => TRUE,
+        'content_access'  => TRUE,
+      ],
+    ],
+  ];
+
+  $config = \Drupal::configFactory()->getEditable('license_service.tiers');
+  $tiers  = (array) ($config->get('tiers') ?? []);
+
+  $changed = FALSE;
+  foreach ($defaults as $id => $data) {
+    if (!isset($tiers[$id])) {
+      $tiers[$id] = $data;
+      $changed = TRUE;
+    }
+  }
+
+  if ($changed) {
+    $config->set('tiers', $tiers)->save();
+  }
+}
+
+/**
  * Implements hook_uninstall().
  *
  * Removes all config, cached license data, and secrets.

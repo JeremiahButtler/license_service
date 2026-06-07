@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\license_service_token_counter\License;
 
+use Drupal\Core\Session\AccountInterface;
 use Drupal\license_service\LicenseFeatureProviderInterface;
 use Psr\Log\LoggerInterface;
 
@@ -85,6 +86,18 @@ final class LicenseBridge implements LicenseContextInterface {
    */
   public function isActive(): bool {
     return $this->status()->isActive();
+  }
+
+  /**
+   * Returns the effective license level for the given account.
+   */
+  public function getLevelForAccount(AccountInterface $account): string {
+    try {
+      return $this->licenseProvider->getLevelForAccount($account);
+    }
+    catch (\Throwable) {
+      return 'free';
+    }
   }
 
   /**

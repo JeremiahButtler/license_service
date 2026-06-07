@@ -23,6 +23,9 @@ license_service_token_counter.token_limit.*:
     role_id:
       type: string
       label: 'Role machine name (only used when scope_type = role)'
+    level_id:
+      type: string
+      label: 'License level id (only used when scope_type = level)'
     amount:
       type: integer
       label: 'Token limit amount'

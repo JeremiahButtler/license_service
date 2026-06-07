@@ -48,8 +48,11 @@ class TiersForm extends ConfigFormBase {
 
   /**
    * The license manager, for cache invalidation after save.
+   *
+   * Nullable because AJAX form-cache deserialization can leave injected
+   * services uninitialized; the submit handler falls back to the container.
    */
-  private LicenseManagerService $licenseManager;
+  private ?LicenseManagerService $licenseManager = NULL;
 
   /**
    * {@inheritdoc}
@@ -84,7 +87,7 @@ class TiersForm extends ConfigFormBase {
 
     $form['help'] = [
       '#markup' => '<p>' . $this->t(
-        'Define the license tiers your site offers to users. Assign tiers to roles in the <a href="/admin/config/license-service/role-levels">Role Levels</a> form. The <em>Free</em> tier is always present and its features cannot be modified (free users have no elevated access).',
+        'Define the license tiers your site offers to users. Assign tiers to roles in the <a href="/admin/config/license-service/role-levels">Role Levels</a> form. The <em>Free</em> tier is always present and cannot be removed.',
       ) . '</p>',
     ];
 
@@ -147,8 +150,6 @@ class TiersForm extends ConfigFormBase {
           '#title'         => $featureKey,
           '#title_display' => 'invisible',
           '#default_value' => (bool) ($tier['features'][$featureKey] ?? FALSE),
-          // Free tier cannot have elevated features enabled.
-          '#disabled'      => $isFree,
         ];
       }
 
@@ -267,12 +268,9 @@ class TiersForm extends ConfigFormBase {
       $isFree = ($tierId === 'free');
       $row    = (array) ($submitted[$tierId] ?? []);
 
-      // Disabled checkboxes (free tier) are not submitted — preserve originals.
       $features = [];
       foreach (array_keys(self::FEATURES) as $featureKey) {
-        $features[$featureKey] = $isFree
-          ? (bool) ($existing[$tierId]['features'][$featureKey] ?? FALSE)
-          : (bool) ($row[$featureKey] ?? FALSE);
+        $features[$featureKey] = (bool) ($row[$featureKey] ?? FALSE);
       }
 
       $saved[$tierId] = [
@@ -290,7 +288,8 @@ class TiersForm extends ConfigFormBase {
     $this->config(self::SETTINGS)->set('tiers', $saved)->save();
 
     // Flush cached license status so level/feature reads see the new config.
-    $this->licenseManager->invalidateCache();
+    // Defensive: $licenseManager may be unset on AJAX form-cache deserialization.
+    ($this->licenseManager ?? \Drupal::service('license_service.license_manager'))->invalidateCache();
 
     parent::submitForm($form, $form_state);
   }

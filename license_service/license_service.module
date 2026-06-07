@@ -59,10 +59,6 @@ function license_service_help(string $route_name, RouteMatchInterface $route_mat
       $output[] = ['#markup' => '<p class="description">' . t('Enter your license key, choose a storage method, and configure server connectivity. Click <strong>Activate</strong> to register this site. The status panel below updates after each activation attempt.') . '</p>'];
       break;
 
-    case 'license_service.role_levels':
-      $output[] = ['#markup' => '<p class="description">' . t("Assign a license level to each Drupal role. A user's effective level is the highest level assigned to any of their roles. Available levels are constrained by your site license tier.") . '</p>'];
-      break;
-
     case 'license_service.content_rules':
       $output[] = ['#markup' => '<p class="description">' . t('Configure access entitlements per level and content type. Set view access, create/edit quotas, metered view limits, which fields to hide, and whether file downloads require this level or above.') . '</p>'];
       break;

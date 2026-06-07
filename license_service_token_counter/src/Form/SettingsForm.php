@@ -6,8 +6,6 @@ namespace Drupal\license_service_token_counter\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Link;
-use Drupal\Core\Url;
 use Drupal\license_service_token_counter\Service\CurrencyHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -53,53 +51,6 @@ final class SettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config = $this->config(self::SETTINGS);
-
-    // ── Quick links to related pages ────────────────────────────────────────
-    $links = [];
-    try {
-      $links[] = Link::fromTextAndUrl(
-        $this->t('AI token usage report'),
-        Url::fromRoute('license_service_token_counter.report')
-      )->toString();
-    }
-    catch (\Exception) {
-    }
-
-    try {
-      $links[] = Link::fromTextAndUrl(
-        $this->t('Usage by user'),
-        Url::fromRoute('view.license_service_token_usage_by_user.page_1')
-      )->toString();
-    }
-    catch (\Exception) {
-    }
-
-    try {
-      $links[] = Link::fromTextAndUrl(
-        $this->t('Token limits'),
-        Url::fromRoute('entity.token_limit.collection')
-      )->toString();
-    }
-    catch (\Exception) {
-    }
-
-    if (\Drupal::moduleHandler()->moduleExists('license_service_token_counter_engine')) {
-      try {
-        $links[] = Link::fromTextAndUrl(
-          $this->t('Pricing tables'),
-          Url::fromRoute('entity.pricing_table.collection')
-        )->toString();
-      }
-      catch (\Exception) {
-      }
-    }
-
-    if ($links) {
-      $form['quick_links'] = [
-        '#markup' => '<p>' . implode(' &mdash; ', $links) . '</p>',
-        '#weight' => -10,
-      ];
-    }
 
     // ── Capture ─────────────────────────────────────────────────────────────
     $form['capture'] = [

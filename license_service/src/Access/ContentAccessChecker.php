@@ -53,6 +53,9 @@ class ContentAccessChecker {
    */
   public function checkNodeAccess(NodeInterface $node, string $op, AccountInterface $account): AccessResultInterface {
     $level       = $this->licenseManager->getLevelForAccount($account);
+    if ($level === 'no_access') {
+      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+    }
     $contentType = $node->bundle();
 
     switch ($op) {
@@ -107,6 +110,9 @@ class ContentAccessChecker {
    */
   public function checkCreateAccess(AccountInterface $account, array $context, string $entityBundle): AccessResultInterface {
     $level = $this->licenseManager->getLevelForAccount($account);
+    if ($level === 'no_access') {
+      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+    }
 
     if (!$this->entitlementResolver->canCreate($level, $entityBundle)) {
       return $this->forbiddenWithCacheability('Your license level does not permit creating this content type.');
@@ -137,6 +143,9 @@ class ContentAccessChecker {
    */
   public function checkEntityAccess(EntityInterface $entity, string $op, AccountInterface $account): AccessResultInterface {
     $level       = $this->licenseManager->getLevelForAccount($account);
+    if ($level === 'no_access') {
+      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+    }
     $contentType = $entity->bundle();
 
     $ok = match($op) {
@@ -166,6 +175,9 @@ class ContentAccessChecker {
     }
 
     $level     = $this->licenseManager->getLevelForAccount($account);
+    if ($level === 'no_access') {
+      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+    }
     $fieldName = $fieldDefinition->getName();
 
     // Determine the content type from the items (entity) if available.
@@ -207,6 +219,9 @@ class ContentAccessChecker {
     // whether the current user's level gates this file.
     $account = $this->currentUser;
     $level   = $this->licenseManager->getLevelForAccount($account);
+    if ($level === 'no_access') {
+      return -1;
+    }
 
     // Query nodes that reference this URI via any file/image field.
     // If any referencing node's content type gates downloads for this level, deny.

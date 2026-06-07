@@ -29,6 +29,11 @@ interface TokenLimitInterface extends ConfigEntityInterface {
   public const SCOPE_SITE_TOTAL = 'site_total';
 
   /**
+   * Scope: limit applies to every user at a specific license level (per user).
+   */
+  public const SCOPE_LEVEL = 'level';
+
+  /**
    * Returns human-readable labels for each scope type.
    *
    * @return array<string, string>
@@ -45,6 +50,11 @@ interface TokenLimitInterface extends ConfigEntityInterface {
    * Returns the role machine name (only meaningful when scope is 'role').
    */
   public function getRoleId(): string;
+
+  /**
+   * Returns the license level id (only meaningful when scope is 'level').
+   */
+  public function getLevelId(): string;
 
   /**
    * Returns the token limit amount (0 indicates no upper bound).

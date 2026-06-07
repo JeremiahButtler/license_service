@@ -1,7 +1,29 @@
 license_service_token_limits.settings:
   path: '/admin/config/license-service/token-limits'
   defaults:
-    _controller: '\Drupal\license_service_token_limits\Controller\TokenLimitsRedirectController::execute'
+    _entity_list: 'token_limit'
     _title: 'Token Limits'
   requirements:
     _permission: 'administer license gate'
+  options:
+    _admin_route: true
+
+license_service_token_limits.token_settings:
+  path: '/admin/config/license-service/token-limits/settings'
+  defaults:
+    _form: '\Drupal\license_service_token_counter\Form\SettingsForm'
+    _title: 'Token Counter Settings'
+  requirements:
+    _permission: 'administer ai token counter'
+  options:
+    _admin_route: true
+
+license_service_token_limits.reports:
+  path: '/admin/config/license-service/reports'
+  defaults:
+    _controller: '\Drupal\license_service_token_limits\Controller\ReportsController::page'
+    _title: 'Reports'
+  requirements:
+    _permission: 'administer ai token counter'
+  options:
+    _admin_route: true

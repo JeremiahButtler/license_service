@@ -1,4 +1,13 @@
 tiers:
+  no_access:
+    label: 'No Access'
+    weight: -20
+    features:
+      field_gating: true
+      download_gating: true
+      metered_views: true
+      quotas: true
+      content_access: true
   free:
     label: Free
     weight: -10
@@ -8,3 +17,30 @@ tiers:
       metered_views: false
       quotas: false
       content_access: false
+  basic:
+    label: Basic
+    weight: 0
+    features:
+      field_gating: false
+      download_gating: false
+      metered_views: false
+      quotas: false
+      content_access: true
+  standard:
+    label: Standard
+    weight: 10
+    features:
+      field_gating: true
+      download_gating: false
+      metered_views: false
+      quotas: false
+      content_access: true
+  professional:
+    label: Professional
+    weight: 20
+    features:
+      field_gating: true
+      download_gating: true
+      metered_views: true
+      quotas: true
+      content_access: true
