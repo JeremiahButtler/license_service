@@ -1,6 +1,6 @@
 license_service.settings.tab:
   route_name: license_service.settings
-  title: 'Settings'
+  title: 'LVS Settings'
   base_route: license_service.settings
   weight: -10
 

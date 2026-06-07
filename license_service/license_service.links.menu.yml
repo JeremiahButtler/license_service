@@ -6,7 +6,7 @@ license_service.admin:
   weight: 10
 
 license_service.admin_settings:
-  title: 'Settings'
+  title: 'LVS Settings'
   route_name: license_service.settings
   parent: license_service.admin
   weight: -10

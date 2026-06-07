@@ -69,24 +69,25 @@ class SettingsForm extends ConfigFormBase {
 
     // ---- Enable License Service (enforcement) — top of page, open ----------
     $form['enforcement'] = [
-      '#type'  => 'details',
-      '#title' => $this->t('Enable License Service'),
-      '#open'  => TRUE,
+      '#type'        => 'details',
+      '#title'       => $this->t('Enable License Service'),
+      '#open'        => TRUE,
+      '#description' => $this->t('These settings control what your Drupal site does <strong>only when its License Verification Server (LVS) license becomes inactive or expired</strong> — for example, a lapsed subscription, a revoked API key, or the LVS being unreachable past the offline grace window. They are <strong>about your LVS license, not about your Drupal users</strong>. The day-to-day gating of who sees what content (role → license level → content type) is handled by <em>Role Levels</em> and <em>Content Rules</em>, which always apply while the license is active and are unaffected by anything in this section. Leave this section disabled if you do not want LVS-side problems — non-payment, key revocation, LVS downtime — to ever change what your site visitors see.'),
     ];
 
     $form['enforcement']['enforcement_enabled'] = [
       '#type'          => 'checkbox',
       '#title'         => $this->t('Enable site-wide enforcement'),
       '#default_value' => $config->get('enforcement_enabled') ?? FALSE,
-      '#description'   => $this->t('<strong>Off (default):</strong> the module never reacts site-wide to license status. Content stays open no matter what the license does.<br><strong>On:</strong> Enforce license restrictions. Your website users will be prevented from accessing site features according to the restrictions you select in this module.'),
+      '#description'   => $this->t('<strong>Off (default):</strong> Your site never reacts site-wide to its own LVS license status. Even if your LVS subscription lapses, the public site keeps running exactly as before; only administrators see a quiet expiry warning in the back-end. Choose this if you do not want a problem with the LVS itself — lapsed subscription, revoked key, server outage — to ever affect what your site visitors see.<br><br><strong>On:</strong> Your site checks its LVS license on every page load. If the license is <strong>active</strong>, nothing changes for anyone. If the license is <strong>inactive or expired</strong>, the <em>Enforcement mode</em> below decides what happens to non-admin visitors. Administrators are never blocked, so you can always reach this page to renew or fix the license.'),
     ];
 
     $form['enforcement']['enforcement_mode'] = [
       '#type'          => 'radios',
       '#title'         => $this->t('Enforcement mode'),
       '#options'       => [
-        'warn_only' => $this->t('Warn only — show a warning message to administrators and users, but do not block access.'),
-        'enforce'   => $this->t('Enforce — redirect non-admin users away from content when the license is inactive.'),
+        'warn_only' => $this->t('Warn only — when your LVS license is inactive or expired, show a warning to administrators and logged-in users browsing admin pages, but do not block any visitor. The public site continues to serve content normally. Use this as a polite "renew your subscription" notice.'),
+        'enforce'   => $this->t('Enforce — when your LVS license is inactive or expired, redirect non-admin visitors to the front page until the license is restored. Administrators, the login page, and the License Service admin pages remain reachable so you can always renew. Use this when you want the public site closed until your LVS license is valid again.'),
       ],
       '#default_value' => $config->get('enforcement_mode') ?? 'warn_only',
       '#states'        => [
@@ -138,10 +139,13 @@ class SettingsForm extends ConfigFormBase {
 
     // How to obtain and store the API key.
     $form['key_section']['intro'] = [
-      '#markup' => '<p>' . $this->t('This site connects to the License Verification Server with a <strong>tenant API key</strong>. To obtain it: sign in to your tenant portal on the <a href=":lvs" target="_blank" rel="noopener noreferrer">License Verification Server</a> and copy the API key shown for your site. Then store it in the <a href=":keys">Key module</a> (choose a key type such as <em>Authentication</em>) and select that key below.', [
-        ':lvs'  => 'https://www.licenseverificationserver.com/',
-        ':keys' => Url::fromUserInput('/admin/config/system/keys')->toString(),
-      ]) . '</p>',
+      '#markup' => $this->t('<p>Connect this site to the <a href=":lvs" target="_blank" rel="noopener noreferrer">License Verification Server</a> (LVS) using an API key from your LVS customer account. If this is your first time, follow these steps in order:</p><ol><li><strong>Create an LVS account</strong> (skip if you already have one). Open the <a href=":register" target="_blank" rel="noopener noreferrer">registration page</a>, register an email address and password, and confirm the account. If signups are closed on your vendor\'s instance, ask the vendor to invite you instead.</li><li><strong>Sign in to the LVS portal</strong> at <a href=":login" target="_blank" rel="noopener noreferrer">www.licenseverificationserver.com/account/login</a>.</li><li><strong>Open the API Keys page.</strong> In the portal sidebar click <em>API Keys</em> (direct link: <a href=":apikeys" target="_blank" rel="noopener noreferrer">account/api-keys</a>).</li><li><strong>Generate a new key.</strong> Under "Generate a new API key", give it a recognizable name — your site\'s domain works well so you can identify and revoke it later — then click <em>Generate API key</em>. The form is pre-set for the <code>drupal_license</code> product; leave it.</li><li><strong>Copy the key immediately.</strong> The full key is shown exactly once, with a built-in <em>Copy</em> button. Only a hash is stored on the server, so if you lose the key you must revoke it from the same page and generate a new one — it cannot be retrieved.</li><li><strong>Store the key in Drupal\'s Key module.</strong> Go to <a href=":keys_add">Configuration → System → Keys → Add key</a>, set <em>Key type</em> to <em>Authentication</em>, choose a <em>Key provider</em> (Configuration is fine; File if you prefer file-based storage), paste the API key as the value, give the key a label such as "License Verification Server", and save.</li><li><strong>Select that key below</strong> in the <em>API key</em> dropdown.</li><li><strong>Accept the terms and click Activate</strong> at the bottom of this page. The Status panel above should switch to <em>Active</em> and show your license details.</li></ol>', [
+        ':lvs'      => 'https://www.licenseverificationserver.com/',
+        ':register' => 'https://www.licenseverificationserver.com/account/register',
+        ':login'    => 'https://www.licenseverificationserver.com/account/login',
+        ':apikeys'  => 'https://www.licenseverificationserver.com/account/api-keys',
+        ':keys_add' => Url::fromUserInput('/admin/config/system/keys/add')->toString(),
+      ]),
     ];
 
     if (!$this->keyProvider->hasKeyModuleSupport()) {
