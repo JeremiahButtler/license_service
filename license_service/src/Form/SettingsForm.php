@@ -99,7 +99,7 @@ class SettingsForm extends ConfigFormBase {
       $form['key_section']['license_key'] = [
         '#type'        => 'password',
         '#title'       => $this->t('API key'),
-        '#description' => $this->t('Enter your API key from the License Verification Server account portal. Leave blank to keep the current key.'),
+        '#description' => $this->t('Enter your API key from the <a href="https://www.licenseverificationserver.com/account/api-keys" target="_blank" rel="noopener noreferrer">API Keys page of your account</a> on the License Verification Server (or a license key issued for this product). Leave blank to keep the current key.'),
         '#maxlength'   => 255,
         '#attributes'  => ['autocomplete' => 'off'],
         '#states'      => [

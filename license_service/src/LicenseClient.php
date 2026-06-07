@@ -113,7 +113,11 @@ class LicenseClient {
 
     try {
       $data = $this->post('/api/v1/activate', [
-        'license_key'  => strtoupper(trim($key)),
+        // NOTE: do NOT uppercase. License keys use an uppercase-only alphabet,
+        // but account API keys are mixed-case (base64url token_urlsafe); upper-
+        // casing them changes their hash and the server returns "unknown license
+        // key". Send the key exactly as entered (trimmed only). — Jeremiah Buttler
+        'license_key'  => trim($key),
         'product_id'   => self::PRODUCT_ID,
         'machine_id'   => $this->getMachineId(),
         'machine_name' => \Drupal::request()->getHost(),
@@ -207,7 +211,9 @@ class LicenseClient {
 
     try {
       $data = $this->post('/api/v1/license/users/authorize', [
-        'license_key'      => strtoupper(trim($key)),
+        // Send the key exactly as entered (trimmed); never uppercase — see
+        // activate() note. Mixed-case API keys break under strtoupper.
+        'license_key'      => trim($key),
         'external_user_id' => $external_user_id,
         'kind'             => $kind,
         'display'          => $display,
@@ -249,7 +255,9 @@ class LicenseClient {
 
     try {
       $data = $this->post('/api/v1/license/users/revoke', [
-        'license_key'      => strtoupper(trim($key)),
+        // Send the key exactly as entered (trimmed); never uppercase — see
+        // activate() note. Mixed-case API keys break under strtoupper.
+        'license_key'      => trim($key),
         'external_user_id' => $external_user_id,
       ]);
     }
