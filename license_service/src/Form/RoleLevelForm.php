@@ -58,7 +58,14 @@ class RoleLevelForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config  = $this->config('license_service.role_levels');
     $roleMap = (array) ($config->get('role_levels') ?? []);
+    $tiers   = (array) ($this->config('license_service.tiers')->get('tiers') ?? []);
     $levels  = $this->licenseManager->getLevelOrder();
+
+    // Only enabled tiers (plus free, which is always selectable) appear as options.
+    $enabledLevels = array_values(array_filter(
+      $levels,
+      static fn(string $l) => $l === 'free' || (bool) ($tiers[$l]['enabled'] ?? TRUE),
+    ));
 
     $form['intro'] = [
       '#markup' => '<p>' . $this->t(
@@ -66,7 +73,7 @@ class RoleLevelForm extends ConfigFormBase {
       ) . '</p>',
     ];
 
-    $levelOptions = $this->buildLevelOptions($levels);
+    $levelOptions = $this->buildLevelOptions($enabledLevels);
 
     $form['role_levels'] = [
       '#type'    => 'table',
@@ -87,10 +94,19 @@ class RoleLevelForm extends ConfigFormBase {
         '#plain_text' => $role->label(),
       ];
 
+      // If this role is already assigned to a tier that is now disabled, keep it
+      // visible in the select so admins don't silently lose the assignment on
+      // save. They must explicitly move the role to an enabled tier to change it.
+      $rowOptions = $levelOptions;
+      if ($current !== '' && !isset($rowOptions[$current]) && isset($tiers[$current])) {
+        $disabledLabel = (string) ($tiers[$current]['label'] ?? ucfirst($current));
+        $rowOptions[$current] = $this->t('@label (disabled)', ['@label' => $disabledLabel]);
+      }
+
       $form['role_levels'][$roleId]['level'] = [
         '#type'          => 'select',
-        '#options'       => $levelOptions,
-        '#default_value' => in_array($current, $levels, TRUE) ? $current : 'free',
+        '#options'       => $rowOptions,
+        '#default_value' => isset($rowOptions[$current]) ? $current : 'free',
         '#parents'       => ['role_levels', $roleId, 'level'],
       ];
 
@@ -137,7 +153,7 @@ class RoleLevelForm extends ConfigFormBase {
   // --------------------------------------------------------------------------
 
   /**
-   * Builds select options from all tenant-defined tiers.
+   * Builds select options from the given tier IDs (caller pre-filters disabled).
    */
   protected function buildLevelOptions(array $levels): array {
     $options = [];

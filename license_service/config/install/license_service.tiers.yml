@@ -2,6 +2,7 @@ tiers:
   no_access:
     label: 'No Access'
     weight: -20
+    enabled: true
     features:
       field_gating: true
       download_gating: true
@@ -11,6 +12,7 @@ tiers:
   free:
     label: Free
     weight: -10
+    enabled: true
     features:
       field_gating: false
       download_gating: false
@@ -20,6 +22,7 @@ tiers:
   basic:
     label: Basic
     weight: 0
+    enabled: true
     features:
       field_gating: false
       download_gating: false
@@ -29,6 +32,7 @@ tiers:
   standard:
     label: Standard
     weight: 10
+    enabled: true
     features:
       field_gating: true
       download_gating: false
@@ -38,6 +42,7 @@ tiers:
   professional:
     label: Professional
     weight: 20
+    enabled: true
     features:
       field_gating: true
       download_gating: true

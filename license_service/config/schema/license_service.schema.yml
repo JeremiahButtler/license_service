@@ -20,9 +20,25 @@ license_service.tiers:
   label: 'License Service tier definitions'
   mapping:
     tiers:
-      type: mapping
+      type: sequence
       label: 'License tiers (keyed by tier ID)'
-      mapping: {}
+      sequence:
+        type: mapping
+        label: 'Tier definition'
+        mapping:
+          label:
+            type: label
+            label: 'Tier label'
+          weight:
+            type: integer
+            label: 'Sort weight'
+          enabled:
+            type: boolean
+            label: 'Tier is available for assignment'
+          features:
+            type: mapping
+            label: 'Feature flags'
+            mapping: {}
 
 license_service.role_levels:
   type: config_object

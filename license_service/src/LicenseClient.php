@@ -483,8 +483,10 @@ class LicenseClient {
     }
 
     // Network failure: apply offline grace window.
-    $config     = $this->configFactory->get('license_service.settings');
-    $graceHours = max(1, (int) ($config->get('offline_grace_hours') ?? 24));
+    // grace_hours is stamped into every signed token by the LVS so each license
+    // level can carry its own offline policy (server-controlled, not hardcoded).
+    // Older tokens that pre-date the field fall back to the 24-hour default.
+    $graceHours = $this->computeGraceHours($payload);
 
     $offlineSince = $this->state->get(self::STATE_OFFLINE_SINCE, '');
     if ($offlineSince === '') {
@@ -697,6 +699,25 @@ class LicenseClient {
     catch (\Exception) {
       return '';
     }
+  }
+
+  /**
+   * Resolves the offline grace window in whole hours from a token payload.
+   *
+   * The LVS stamps a grace_hours value into every signed token so each license
+   * level can carry its own offline policy (server-controlled, not site-editable).
+   * Older tokens that pre-date this field fall back to the 24-hour default.
+   *
+   * Author: Jeremiah Buttler.
+   *
+   * @param array $payload
+   *   Decoded and verified token payload.
+   *
+   * @return int
+   *   Grace window in hours, minimum 1.
+   */
+  protected function computeGraceHours(array $payload): int {
+    return max(1, (int) ($payload['grace_hours'] ?? 24));
   }
 
   /**

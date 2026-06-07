@@ -96,7 +96,7 @@ class TiersForm extends ConfigFormBase {
       '#attributes' => ['id' => 'license-service-tiers-wrap'],
     ];
 
-    $headers = [$this->t('Tier ID'), $this->t('Label'), $this->t('Weight')];
+    $headers = [$this->t('Tier ID'), $this->t('Label'), $this->t('Weight'), $this->t('Enabled')];
     foreach (self::FEATURES as $label) {
       $headers[] = $this->t($label);
     }
@@ -143,6 +143,25 @@ class TiersForm extends ConfigFormBase {
         '#default_value' => (int) ($tier['weight'] ?? 0),
         '#attributes'    => ['class' => ['tier-weight']],
       ];
+
+      // Free tier is always enabled; other tiers may be toggled by admins.
+      if ($isFree) {
+        $row['enabled'] = [
+          '#type'          => 'checkbox',
+          '#title'         => $this->t('Enabled'),
+          '#title_display' => 'invisible',
+          '#default_value' => TRUE,
+          '#disabled'      => TRUE,
+        ];
+      }
+      else {
+        $row['enabled'] = [
+          '#type'          => 'checkbox',
+          '#title'         => $this->t('Enabled'),
+          '#title_display' => 'invisible',
+          '#default_value' => (bool) ($tier['enabled'] ?? TRUE),
+        ];
+      }
 
       foreach (array_keys(self::FEATURES) as $featureKey) {
         $row[$featureKey] = [
@@ -276,6 +295,8 @@ class TiersForm extends ConfigFormBase {
       $saved[$tierId] = [
         'label'    => trim((string) ($row['label'] ?? ucfirst($tierId))),
         'weight'   => (int) ($row['weight'] ?? 0),
+        // Free is always enabled; disabled checkbox submits 0 so force TRUE.
+        'enabled'  => $isFree ? TRUE : (bool) ($row['enabled'] ?? TRUE),
         'features' => $features,
       ];
     }
@@ -305,6 +326,7 @@ class TiersForm extends ConfigFormBase {
     return [
       'label'    => $label,
       'weight'   => $weight,
+      'enabled'  => TRUE,
       'features' => array_fill_keys(array_keys(self::FEATURES), FALSE),
     ];
   }
