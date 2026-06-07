@@ -78,7 +78,9 @@ class SettingsForm extends ConfigFormBase {
       '#title'         => $this->t('Key storage method'),
       '#options'       => $this->buildKeyProviderOptions(),
       '#default_value' => $provider,
-      '#description'   => $this->t('For production, use the <a href="https://www.drupal.org/project/key">Key module</a> or <code>settings.php</code> to avoid storing the key in exported configuration.'),
+      '#description'   => $this->t('For production, use the <a href=":key_url">Key module</a> or <code>settings.php</code> to avoid storing the key in exported configuration.', [
+        ':key_url' => Url::fromUserInput('/admin/config/system/keys')->toString(),
+      ]),
     ];
 
     if ($provider === 'key_module' && $this->keyProvider->hasKeyModuleSupport()) {
