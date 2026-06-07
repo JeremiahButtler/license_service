@@ -75,7 +75,12 @@ final class EngineCostCalculatorTest extends UnitTestCase {
   /**
    * Builds a calculator with the given pricing tables.
    *
-   * @param array<string, PricingTableInterface> $tables  id => entity.
+   * @param array<string, PricingTableInterface> $tables
+   *   Map of pricing table id => entity.
+   * @param string $currency
+   *   The display_currency setting value.
+   * @param bool $licenseActive
+   *   Whether the mocked license context reports an active license.
    */
   private function calculator(array $tables, string $currency = 'USD', bool $licenseActive = TRUE): EngineCostCalculator {
     $license = $this->createMock(LicenseContextInterface::class);
