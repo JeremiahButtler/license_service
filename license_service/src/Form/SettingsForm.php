@@ -78,7 +78,7 @@ class SettingsForm extends ConfigFormBase {
       '#type'          => 'checkbox',
       '#title'         => $this->t('Enable site-wide enforcement'),
       '#default_value' => $config->get('enforcement_enabled') ?? FALSE,
-      '#description'   => $this->t('<strong>Off (default):</strong> the module never reacts site-wide to license status. Content stays open no matter what the license does.<br><strong>On:</strong> on every page load the module checks the license, and if the license is inactive or expired, it applies the mode you pick below.'),
+      '#description'   => $this->t('<strong>Off (default):</strong> the module never reacts site-wide to license status. Content stays open no matter what the license does.<br><strong>On:</strong> Enforce license restrictions. Your website users will be prevented from accessing site features according to the restrictions you select in this module.'),
     ];
 
     $form['enforcement']['enforcement_mode'] = [
