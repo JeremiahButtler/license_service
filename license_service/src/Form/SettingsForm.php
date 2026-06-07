@@ -66,10 +66,10 @@ class SettingsForm extends ConfigFormBase {
     $provider = (string) ($config->get('key_provider') ?? 'config');
     $status   = $this->licenseManager->getStatus();
 
-    // ---- License Key -------------------------------------------------------
+    // ---- API Key -----------------------------------------------------------
     $form['key_section'] = [
       '#type'  => 'details',
-      '#title' => $this->t('License key'),
+      '#title' => $this->t('API key'),
       '#open'  => TRUE,
     ];
 
@@ -87,7 +87,7 @@ class SettingsForm extends ConfigFormBase {
         '#title'         => $this->t('Key'),
         '#options'       => $this->getKeyModuleOptions(),
         '#default_value' => $config->get('key_id') ?? '',
-        '#description'   => $this->t('Select the Key module key that stores your license key.'),
+        '#description'   => $this->t('Select the Key module key that stores your API key.'),
         '#states'        => [
           'visible' => [':input[name="key_provider"]' => ['value' => 'key_module']],
         ],
@@ -98,8 +98,8 @@ class SettingsForm extends ConfigFormBase {
       // Show password field only when not using settings.php (which is set externally).
       $form['key_section']['license_key'] = [
         '#type'        => 'password',
-        '#title'       => $this->t('License key'),
-        '#description' => $this->t('Enter your license key. Leave blank to keep the current key. Keys are stored using the method selected above.'),
+        '#title'       => $this->t('API key'),
+        '#description' => $this->t('Enter your API key from the License Verification Server account portal. Leave blank to keep the current key.'),
         '#maxlength'   => 255,
         '#attributes'  => ['autocomplete' => 'off'],
         '#states'      => [
@@ -117,7 +117,7 @@ class SettingsForm extends ConfigFormBase {
     }
     else {
       $form['key_section']['settings_php_note'] = [
-        '#markup' => '<p>' . $this->t('The license key is set in <code>settings.php</code> via <code>$settings[\'license_service_key\']</code>.') . '</p>',
+        '#markup' => '<p>' . $this->t('The API key is set in <code>settings.php</code> via <code>$settings[\'license_service_key\']</code>.') . '</p>',
       ];
     }
 
@@ -289,7 +289,7 @@ class SettingsForm extends ConfigFormBase {
 
     if ($rawKey === '' && $provider !== 'settings_php' && $provider !== 'key_module') {
       if ($this->keyProvider->getKey() === '') {
-        $form_state->setErrorByName('license_key', $this->t('Enter a license key to activate.'));
+        $form_state->setErrorByName('license_key', $this->t('Enter an API key to activate.'));
       }
     }
 

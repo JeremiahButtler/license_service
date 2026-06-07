@@ -108,7 +108,7 @@ class LicenseClient {
   public function activate(): array {
     $key = $this->keyProvider->getKey();
     if ($key === '') {
-      return ['ok' => FALSE, 'error' => 'No license key configured. Enter a key in the License Service settings.'];
+      return ['ok' => FALSE, 'error' => 'No API key configured. Enter a key in the License Service settings.'];
     }
 
     try {
@@ -385,7 +385,7 @@ class LicenseClient {
   public function getStatus(): array {
     $token = $this->state->get(self::STATE_CACHED_TOKEN, '');
     if ($token === '') {
-      return $this->unlicensedStatus('No license key activated on this site. Enter a key in License Service settings.');
+      return $this->unlicensedStatus('No API key activated on this site. Enter a key in License Service settings.');
     }
 
     $pubKey = $this->getPublicKey();

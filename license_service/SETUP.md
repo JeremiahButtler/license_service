@@ -42,16 +42,21 @@ or an admin account on the License Verification Server.
 
 ---
 
-## Step 2 — Issue a test license key
+## Step 2 — Generate a test API key
 
-1. In the admin dashboard, go to **Licenses → New License**.
-2. Set:
-   - **Product:** `drupal_license`
-   - **Tier:** `pro` (or whichever tier you want to test)
-   - **Seat limit:** `1`
-   - **Status:** `active`
-   - **Expires:** leave blank for perpetual, or set a future date for subscription
-3. Click **Save**. Copy the generated key (format: `XXXX-XXXX-XXXX-XXXX`).
+The simplest path is to self-generate a key from the account portal (no admin
+action needed):
+
+1. Go to `https://www.licenseverificationserver.com/account` and register or log in.
+2. Click **API Keys → Generate API key**.
+3. Copy the raw key shown on the page — it is not displayed again.
+
+**Alternative — admin-issue via the web dashboard:**
+
+1. In the admin dashboard, go to **End Users**, select (or create) the user, and
+   click **API Keys…**.
+2. Click **Generate** — set name, tier, and product (`drupal_license`).
+3. Copy the raw key from the dialog.
 
 ---
 
@@ -62,7 +67,7 @@ or an admin account on the License Verification Server.
    drush en license_service
    ```
 2. Navigate to **Admin → Configuration → License Service → Settings**.
-3. Paste your license key into the **License key** field.
+3. Paste your API key into the **API key** field.
 4. Confirm the **Server URL** is `https://www.licenseverificationserver.com`.
 5. Click **Activate**.
 6. The status panel should update to show **Licensed** with your tier and expiry.
@@ -71,7 +76,7 @@ or an admin account on the License Verification Server.
 
 ## Step 4 — Verify the activation on the server
 
-1. In the admin dashboard, go to **Licenses** and find your key.
+1. In the admin dashboard, go to **End Users → [user] → API Keys** and find your key.
 2. Confirm the seat shows as **activated** with the Drupal site's machine ID.
 3. The machine ID visible in the Drupal status panel
    (**Configuration → License Service → Status**) should match the server record.
