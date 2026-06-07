@@ -116,7 +116,7 @@ class LicenseClient {
         // NOTE: do NOT uppercase. License keys use an uppercase-only alphabet,
         // but account API keys are mixed-case (base64url token_urlsafe); upper-
         // casing them changes their hash and the server returns "unknown license
-        // key". Send the key exactly as entered (trimmed only). — Jeremiah Buttler
+        // key". Send the key exactly as entered (trimmed only). — Jeremiah Buttler.
         'license_key'  => trim($key),
         'product_id'   => self::PRODUCT_ID,
         'machine_id'   => $this->getMachineId(),
