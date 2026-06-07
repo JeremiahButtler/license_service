@@ -339,17 +339,14 @@ class EnforcementSubscriberTest extends TestCase {
   }
 
   // --------------------------------------------------------------------------
-  // Known bug: enforce-mode redirect on the front page causes an infinite loop.
+  // Regression: enforce-mode redirect must not loop on the front page.
   //
-  // '<front>' is NOT in EXEMPT_ROUTES and isAdminRoute() returns FALSE for it,
-  // so the subscriber unconditionally redirects any non-admin, non-bypass user
-  // whose route is '<front>' back to '<front>' on every request.
+  // If '<front>' were ever removed from EXEMPT_ROUTES, the subscriber would
+  // unconditionally redirect any non-admin, non-bypass user whose route is
+  // '<front>' back to '<front>' on every request — an infinite redirect loop.
   //
-  // This test documents the bug.  It currently FAILS (assertNull fails because a
-  // redirect IS set).  The fix is to add '<front>' to EXEMPT_ROUTES or add an
-  // explicit guard for the front page.
-  //
-  // @todo Fix redirect loop: add '<front>' to EXEMPT_ROUTES in EnforcementSubscriber.
+  // This test pins the exemption in place. It passes because '<front>' is
+  // listed in EnforcementSubscriber::EXEMPT_ROUTES; do not remove it.
   // --------------------------------------------------------------------------
 
   /**
@@ -366,11 +363,10 @@ class EnforcementSubscriberTest extends TestCase {
 
     $svc->onRequest($event);
 
-    // Expected: no redirect (front page should be exempt to avoid infinite loop).
-    // Currently FAILS because '<front>' is not in EXEMPT_ROUTES.
+    // The front page must not redirect to itself in enforce mode (would loop).
     $this->assertNull(
       $event->getResponse(),
-      'The front page must not redirect to itself in enforce mode (infinite loop bug).'
+      'The front page must remain exempt in enforce mode to avoid an infinite redirect loop.'
     );
   }
 
