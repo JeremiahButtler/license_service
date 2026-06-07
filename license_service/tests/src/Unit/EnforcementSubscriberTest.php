@@ -72,13 +72,20 @@ class EnforcementSubscriberTest extends TestCase {
   /**
    * Builds an EnforcementSubscriber with all dependencies as mocks.
    *
-   * @param bool   $enforcementEnabled Config: enforcement_enabled.
-   * @param string $enforcementMode    Config: enforcement_mode ('warn_only'|'enforce').
-   * @param bool   $licensed           Whether licenseManager reports a valid license.
-   * @param bool   $isAdmin            Whether the current user has 'administer license gate'.
-   * @param bool   $hasBypass          Whether the current user has 'bypass license gate'.
-   * @param string $currentRoute       The route name returned by routeMatch.
-   * @param array  $licenseWarnings    Warnings array from licenseManager::getStatus().
+   * @param bool $enforcementEnabled
+   *   Config: enforcement_enabled.
+   * @param string $enforcementMode
+   *   Config: enforcement_mode ('warn_only'|'enforce').
+   * @param bool $licensed
+   *   Whether licenseManager reports a valid license.
+   * @param bool $isAdmin
+   *   Whether the current user has 'administer license gate'.
+   * @param bool $hasBypass
+   *   Whether the current user has 'bypass license gate'.
+   * @param string $currentRoute
+   *   The route name returned by routeMatch.
+   * @param array $licenseWarnings
+   *   Warnings array from licenseManager::getStatus().
    */
   private function buildSubscriber(
     bool $enforcementEnabled = TRUE,
@@ -92,7 +99,7 @@ class EnforcementSubscriberTest extends TestCase {
     $settings = $this->createMock(Config::class);
     $settings->method('get')->willReturnMap([
       ['enforcement_enabled', $enforcementEnabled],
-      ['enforcement_mode',    $enforcementMode],
+      ['enforcement_mode', $enforcementMode],
     ]);
 
     $configFactory = $this->createMock(ConfigFactoryInterface::class);
@@ -107,7 +114,7 @@ class EnforcementSubscriberTest extends TestCase {
     $currentUser = $this->createMock(AccountProxyInterface::class);
     $currentUser->method('hasPermission')->willReturnMap([
       ['administer license gate', $isAdmin],
-      ['bypass license gate',     $hasBypass],
+      ['bypass license gate', $hasBypass],
     ]);
 
     $messenger = $this->createMock(MessengerInterface::class);
@@ -208,7 +215,7 @@ class EnforcementSubscriberTest extends TestCase {
     $settings = $this->createMock(Config::class);
     $settings->method('get')->willReturnMap([
       ['enforcement_enabled', TRUE],
-      ['enforcement_mode',    'enforce'],
+      ['enforcement_mode', 'enforce'],
     ]);
 
     $configFactory = $this->createMock(ConfigFactoryInterface::class);
@@ -220,7 +227,7 @@ class EnforcementSubscriberTest extends TestCase {
     $currentUser = $this->createMock(AccountProxyInterface::class);
     $currentUser->method('hasPermission')->willReturnMap([
       ['administer license gate', TRUE],
-      ['bypass license gate',     FALSE],
+      ['bypass license gate', FALSE],
     ]);
 
     $routeMatch = $this->createMock(RouteMatchInterface::class);

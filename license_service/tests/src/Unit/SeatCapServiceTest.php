@@ -36,11 +36,16 @@ class SeatCapServiceTest extends TestCase {
   /**
    * Builds a SeatCapService with all dependencies as mocks.
    *
-   * @param array $roleLevels  role_id => level map for license_service.role_levels config.
-   * @param array $lvsResponse Return value of LicenseClient::authorizeUser().
-   * @param \Drupal\Core\Lock\LockBackendInterface|null $lock Optional pre-built lock mock.
-   * @param \Drupal\Core\Cache\CacheBackendInterface|null $cache Optional pre-built cache mock.
-   * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface|null $cacheTagsInvalidator Optional mock.
+   * @param array $roleLevels
+   *   Map of role_id => level for the license_service.role_levels config.
+   * @param array $lvsResponse
+   *   Return value of LicenseClient::authorizeUser().
+   * @param \Drupal\Core\Lock\LockBackendInterface|null $lock
+   *   Optional pre-built lock mock.
+   * @param \Drupal\Core\Cache\CacheBackendInterface|null $cache
+   *   Optional pre-built cache mock.
+   * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface|null $cacheTagsInvalidator
+   *   Optional mock.
    */
   private function buildService(
     array $roleLevels = [],
@@ -81,8 +86,10 @@ class SeatCapServiceTest extends TestCase {
   /**
    * Builds a LockBackendInterface mock with configurable acquire() return values.
    *
-   * @param bool $firstAcquire  Result of the first acquire() call.
-   * @param bool $secondAcquire Result of the second acquire() call (after wait).
+   * @param bool $firstAcquire
+   *   Result of the first acquire() call.
+   * @param bool $secondAcquire
+   *   Result of the second acquire() call (after wait).
    */
   private function buildLock(bool $firstAcquire = TRUE, bool $secondAcquire = TRUE): LockBackendInterface {
     $lock = $this->createMock(LockBackendInterface::class);
@@ -487,4 +494,3 @@ class SeatCapServiceTest extends TestCase {
   }
 
 }
-

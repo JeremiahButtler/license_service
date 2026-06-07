@@ -147,9 +147,9 @@ class SettingsForm extends ConfigFormBase {
     if (!$this->keyProvider->hasKeyModuleSupport()) {
       $form['key_section']['no_key_module'] = [
         '#markup' => '<p><strong>' . $this->t('The Key module is required but is not enabled.') . '</strong> '
-          . $this->t('Install it with <code>composer require drupal/key</code> and enable it on the <a href=":modules">Extend</a> page, then return here to select your key.', [
-            ':modules' => Url::fromRoute('system.modules_list')->toString(),
-          ]) . '</p>',
+        . $this->t('Install it with <code>composer require drupal/key</code> and enable it on the <a href=":modules">Extend</a> page, then return here to select your key.', [
+          ':modules' => Url::fromRoute('system.modules_list')->toString(),
+        ]) . '</p>',
       ];
     }
     else {

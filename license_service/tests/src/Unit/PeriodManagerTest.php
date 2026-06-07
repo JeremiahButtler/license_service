@@ -71,7 +71,7 @@ final class PeriodManagerTest extends UnitTestCase {
   // ---------------------------------------------------------------------------
 
   /**
-   * 'day' returns midnight of the reference date.
+   * The 'day' key returns midnight of the reference date.
    *
    * 2026-06-03 00:00:00 UTC = 1780444800.
    *
@@ -82,7 +82,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'daily' alias also works.
+   * The 'daily' alias also works.
    *
    * @covers ::getStart
    */
@@ -91,7 +91,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'week' returns the Monday midnight that started the ISO week.
+   * The 'week' key returns the Monday midnight that started the ISO week.
    *
    * The reference date (Wednesday) falls in the week starting Monday 2026-06-01.
    * 2026-06-01 00:00:00 UTC = 1780272000.
@@ -103,7 +103,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'weekly' alias also works.
+   * The 'weekly' alias also works.
    *
    * @covers ::getStart
    */
@@ -112,7 +112,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'month' returns midnight on the first of the current calendar month.
+   * The 'month' key returns midnight on the first of the current calendar month.
    *
    * 2026-06-01 00:00:00 UTC = 1780272000.
    *
@@ -123,7 +123,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'monthly' alias also works.
+   * The 'monthly' alias also works.
    *
    * @covers ::getStart
    */
@@ -132,7 +132,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'year' returns midnight on January 1 of the current year.
+   * The 'year' key returns midnight on January 1 of the current year.
    *
    * 2026-01-01 00:00:00 UTC = 1767225600.
    *
@@ -143,7 +143,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'lifetime' returns 0 (no lower bound).
+   * The 'lifetime' key returns 0 (no lower bound).
    *
    * @covers ::getStart
    */
@@ -172,7 +172,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'week' with a Monday $now should return the same midnight (no day subtracted).
+   * The 'week' key with a Monday $now should return the same midnight (no day subtracted).
    *
    * 2026-06-01 09:00:00 UTC = 1780304400 (a Monday).
    * Expected week start: 2026-06-01 00:00:00 UTC = 1780272000.
@@ -180,12 +180,13 @@ final class PeriodManagerTest extends UnitTestCase {
    * @covers ::getStart
    */
   public function testWeekOnMonday(): void {
-    $monday = 1780272000 + 32400; // Monday June 1 midnight + 9 hours.
+    // Monday June 1 midnight + 9 hours.
+    $monday = 1780272000 + 32400;
     $this->assertSame(1780272000, $this->manager->getStart('week', $monday));
   }
 
   /**
-   * 'week' with a Sunday $now returns the preceding Monday.
+   * The 'week' key with a Sunday $now returns the preceding Monday.
    *
    * 2026-06-07 12:00:00 UTC (Sunday).
    * Expected week start: 2026-06-01 00:00:00 UTC = 1780272000.
@@ -193,7 +194,8 @@ final class PeriodManagerTest extends UnitTestCase {
    * @covers ::getStart
    */
   public function testWeekOnSunday(): void {
-    $sunday = 1780272000 + (6 * 86400) + 43200; // Monday June 1 + 6 days + 12 hours.
+    // Monday June 1 + 6 days + 12 hours.
+    $sunday = 1780272000 + (6 * 86400) + 43200;
     $this->assertSame(1780272000, $this->manager->getStart('week', $sunday));
   }
 
@@ -202,7 +204,7 @@ final class PeriodManagerTest extends UnitTestCase {
   // ---------------------------------------------------------------------------
 
   /**
-   * 'daily' returns a YYYY-MM-DD formatted key.
+   * The 'daily' period returns a YYYY-MM-DD formatted key.
    *
    * @covers ::getCurrentPeriodKey
    */
@@ -212,7 +214,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'day' alias also returns a YYYY-MM-DD formatted key.
+   * The 'day' alias also returns a YYYY-MM-DD formatted key.
    *
    * @covers ::getCurrentPeriodKey
    */
@@ -224,7 +226,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'weekly' returns a key matching the ISO week-numbering year format.
+   * The 'weekly' period returns a key matching the ISO week-numbering year format.
    *
    * Format: YYYY-W (e.g. '2026-23') — uses 'o' (ISO year) not 'Y'.
    *
@@ -236,7 +238,7 @@ final class PeriodManagerTest extends UnitTestCase {
   }
 
   /**
-   * 'monthly' returns a YYYY-MM formatted key.
+   * The 'monthly' period returns a YYYY-MM formatted key.
    *
    * @covers ::getCurrentPeriodKey
    */
@@ -261,7 +263,7 @@ final class PeriodManagerTest extends UnitTestCase {
   // ---------------------------------------------------------------------------
 
   /**
-   * labels() returns all expected period keys.
+   * Labels() returns all expected period keys.
    *
    * @covers ::labels
    */

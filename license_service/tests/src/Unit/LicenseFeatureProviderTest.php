@@ -239,7 +239,7 @@ class LicenseFeatureProviderTest extends TestCase {
     $provider = $this->buildProviderWithRoles(['editor' => 'standard']);
     $envelope = $provider->getEnvelope();
     $this->assertArrayHasKey('quotas', $envelope);
-    // quotas is FALSE when no tier has the feature enabled.
+    // Quotas is FALSE when no tier has the feature enabled.
     $this->assertFalse($envelope['quotas']);
   }
 

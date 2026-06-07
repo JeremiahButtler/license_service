@@ -52,7 +52,7 @@ class ContentAccessChecker {
    * Cache contexts: user.roles + tag license_service.
    */
   public function checkNodeAccess(NodeInterface $node, string $op, AccountInterface $account): AccessResultInterface {
-    $level       = $this->licenseManager->getLevelForAccount($account);
+    $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
       return $this->forbiddenWithCacheability('Your account does not have access to site content.');
     }
@@ -142,7 +142,7 @@ class ContentAccessChecker {
    * checkNodeAccess() and should not be passed here.
    */
   public function checkEntityAccess(EntityInterface $entity, string $op, AccountInterface $account): AccessResultInterface {
-    $level       = $this->licenseManager->getLevelForAccount($account);
+    $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
       return $this->forbiddenWithCacheability('Your account does not have access to site content.');
     }
@@ -174,7 +174,7 @@ class ContentAccessChecker {
       return $this->neutralWithCacheability();
     }
 
-    $level     = $this->licenseManager->getLevelForAccount($account);
+    $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
       return $this->forbiddenWithCacheability('Your account does not have access to site content.');
     }

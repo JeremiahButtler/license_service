@@ -228,7 +228,7 @@ class EntitlementResolverTest extends TestCase {
   }
 
   /**
-   * getCurrentPeriodKey() delegates to PeriodManager — verify format.
+   * GetCurrentPeriodKey() delegates to PeriodManager — verify format.
    *
    * @covers ::getCurrentPeriodKey
    */
