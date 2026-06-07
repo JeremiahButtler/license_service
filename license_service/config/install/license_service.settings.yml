@@ -1,6 +1,4 @@
-server_url: 'https://www.licenseverificationserver.com'
-key_provider: 'config'
+key_provider: 'key_module'
 key_id: ''
-expiry_warning_days: 7
 enforcement_enabled: false
 enforcement_mode: 'warn_only'

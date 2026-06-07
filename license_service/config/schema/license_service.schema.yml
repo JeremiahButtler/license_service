@@ -2,18 +2,12 @@ license_service.settings:
   type: config_object
   label: 'License Service settings'
   mapping:
-    server_url:
-      type: string
-      label: 'License Verification Server URL'
     key_provider:
       type: string
-      label: 'Key provider type (key_module, settings_php, or config)'
+      label: 'Key provider type (always key_module)'
     key_id:
       type: string
-      label: 'Key module key ID (when key_provider is key_module)'
-    expiry_warning_days:
-      type: integer
-      label: 'Days before expiry to start showing warnings'
+      label: 'Key module key ID (the Key entity that holds the API key)'
     enforcement_enabled:
       type: boolean
       label: 'Enable site-wide gate when the license is missing or expired'

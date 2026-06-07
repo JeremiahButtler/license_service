@@ -7,3 +7,4 @@ configure: license_service.settings
 dependencies:
   - drupal:node
   - drupal:user
+  - key:key

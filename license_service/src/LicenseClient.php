@@ -186,6 +186,32 @@ class LicenseClient {
   }
 
   /**
+   * Probes the License Verification Server for reachability (no key required).
+   *
+   * Hits the public GET /api/v1/pubkey endpoint over HTTPS to confirm the
+   * server is reachable and the TLS handshake succeeds. This is a connectivity
+   * check only — it does not validate the configured API key (use Activate for
+   * that). Never throws; returns a status array.
+   *
+   * @return array
+   *   ['ok' => TRUE] on success, or ['ok' => FALSE, 'error' => string].
+   */
+  public function testConnection(): array {
+    try {
+      $data = $this->get('/api/v1/pubkey');
+    }
+    catch (\Exception $e) {
+      return ['ok' => FALSE, 'error' => $e->getMessage()];
+    }
+
+    if (empty($data['public_key'])) {
+      return ['ok' => FALSE, 'error' => 'The server responded but did not return a public key.'];
+    }
+
+    return ['ok' => TRUE];
+  }
+
+  /**
    * Authorizes an individual user against the LVS per-user license ledger.
    *
    * Per-user licensing — Author: Jeremiah Buttler.
@@ -503,21 +529,18 @@ class LicenseClient {
   }
 
   /**
-   * Returns the server URL from config, validated to be HTTPS and non-private.
+   * Returns the fixed production License Verification Server URL.
    *
-   * Falls back to the default production URL if the config value fails
-   * validation, preventing SSRF via non-HTTPS or internal URLs.
+   * The server is hardcoded and intentionally NOT configurable: there is no
+   * admin or configuration override, so a tampered config value can never
+   * redirect license traffic elsewhere (SSRF / server-swap prevention). Even
+   * if traffic were somehow pointed at a rogue server, that server could not
+   * forge the Ed25519-signed tokens this client pins, so licenses cannot be
+   * spoofed. Request-time host pinning (assertPublicHost) remains in place as
+   * defense-in-depth against DNS rebinding on the fixed host.
    */
   public function getServerUrl(): string {
-    $url = (string) ($this->configFactory->get('license_service.settings')->get('server_url') ?? '');
-    if ($url === '' || !str_starts_with($url, 'https://')) {
-      return self::DEFAULT_SERVER_URL;
-    }
-    $host = (string) parse_url($url, PHP_URL_HOST);
-    if ($host === '' || $this->isPrivateHost($host)) {
-      return self::DEFAULT_SERVER_URL;
-    }
-    return $this->normalizeServerUrl(rtrim($url, '/'));
+    return $this->normalizeServerUrl(self::DEFAULT_SERVER_URL);
   }
 
   /**
@@ -697,35 +720,16 @@ class LicenseClient {
     bool $offline = FALSE,
     string $warning = '',
   ): array {
-    $config          = $this->configFactory->get('license_service.settings');
-    $warnDays        = (int) ($config->get('expiry_warning_days') ?? 7);
+    // Per-site expiry warnings are intentionally not generated: the site does
+    // not surface a "license expires soon" notice. The expiring_soon /
+    // days_until_expiry keys are preserved (as FALSE / NULL) for API stability.
     $expiresAt       = $payload['expires_at'] ?? NULL;
-    $now             = new \DateTime('now', new \DateTimeZone('UTC'));
     $warnings        = [];
     $expiringSoon    = FALSE;
     $daysUntilExpiry = NULL;
 
     if ($warning !== '') {
       $warnings[] = $warning;
-    }
-
-    // Expiry warning (only while still licensed).
-    if ($licensed && $expiresAt !== NULL) {
-      $exp = $this->parseIso($expiresAt);
-      if ($exp !== NULL) {
-        $diff = $now->diff($exp);
-        if ($exp > $now) {
-          $daysUntilExpiry = (int) $diff->days;
-          if ($daysUntilExpiry <= $warnDays) {
-            $expiringSoon = TRUE;
-            $kind = $payload['trial'] ?? FALSE ? 'trial' : 'license';
-            $when = $exp->format('Y-m-d');
-            $warnings[] = $daysUntilExpiry >= 1
-              ? "Your {$kind} expires in {$daysUntilExpiry} day(s), on {$when}. Renew to avoid interruption."
-              : "Your {$kind} expires today ({$when}). Renew to avoid interruption.";
-          }
-        }
-      }
     }
 
     return [
