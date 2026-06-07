@@ -37,7 +37,8 @@ composer.phar
 phpunit-bootstrap.php
 phpunit-runner.php
 phpstan-bootstrap.php
-phpstan*.neon
+# phpstan.neon is tracked (relative paths only; documents the L6 gate for the module).
+# phpstan-drupal-stubs and local overrides remain local-only.
 phpstan-drupal-stubs*.php
 phpcs-bootstrap.php
 
