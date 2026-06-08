@@ -212,13 +212,13 @@ function license_service_subscriptions_cron(): void {
   // No more than one reminder per 24h.
   $reminderCutoff = $now - 86400;
 
-  $reminderCondition = $database->or()
+  $reminderQuery     = $database->select('license_service_subscriptions_state', 's')
+    ->fields('s', ['uid', 'commerce_subscription_id', 'plan_id'])
+    ->condition('state', 'active');
+  $reminderCondition = $reminderQuery->orConditionGroup()
     ->isNull('last_reminder_sent_at')
     ->condition('last_reminder_sent_at', $reminderCutoff, '<');
-
-  $activeRows = $database->select('license_service_subscriptions_state', 's')
-    ->fields('s', ['uid', 'commerce_subscription_id', 'plan_id'])
-    ->condition('state', 'active')
+  $activeRows = $reminderQuery
     ->condition($reminderCondition)
     ->execute()
     ->fetchAll();
@@ -227,7 +227,7 @@ function license_service_subscriptions_cron(): void {
     $commerceSubId = (int) $row->commerce_subscription_id;
 
     // Load the Commerce subscription to get the next renewal time.
-    // @todo Phase 5: verify getNextRenewalTime() against installed commerce_recurring.
+    // getNextRenewalTime() verified 2026-06-08 against commerce_recurring 8.x-1.x source.
     try {
       $commerceSub = \Drupal::entityTypeManager()
         ->getStorage('commerce_subscription')

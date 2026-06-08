@@ -175,8 +175,8 @@ class SubscribersController extends ControllerBase {
     $info = $map[$state] ?? ['class' => 'state-unknown', 'label' => $state];
 
     return [
-      '#markup' => '<span class="lss-state ' . htmlspecialchars($info['class']) . '">'
-      . htmlspecialchars($info['label'])
+      '#markup' => '<span class="lss-state ' . htmlspecialchars((string) $info['class']) . '">'
+      . htmlspecialchars((string) $info['label'])
       . '</span>',
     ];
   }

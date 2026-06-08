@@ -372,7 +372,7 @@ class TierMigrationService {
     // 5. Schedule period-end cancellation on the Commerce subscription.
     //    $subscription->cancel(TRUE) sets scheduled_changes so Commerce
     //    Recurring's RecurringOrderManager::renewOrder() cancels at period-end.
-    //    @todo Phase 5: verify cancel(TRUE) API against installed commerce_recurring.
+    //    cancel(TRUE) verified 2026-06-08 against commerce_recurring 8.x-1.x source.
     try {
       $subscription = $this->entityTypeManager
         ->getStorage('commerce_subscription')
