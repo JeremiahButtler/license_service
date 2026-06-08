@@ -96,7 +96,7 @@ class TiersForm extends ConfigFormBase {
       '#attributes' => ['id' => 'license-service-tiers-wrap'],
     ];
 
-    $headers = [$this->t('Tier ID'), $this->t('Label'), $this->t('Weight'), $this->t('Enabled')];
+    $headers = [$this->t('Tier ID'), $this->t('Label'), $this->t('Weight'), $this->t('Active')];
     foreach (self::FEATURES as $label) {
       $headers[] = $this->t($label);
     }
@@ -144,22 +144,22 @@ class TiersForm extends ConfigFormBase {
         '#attributes'    => ['class' => ['tier-weight']],
       ];
 
-      // Free tier is always enabled; other tiers may be toggled by admins.
+      // Free tier is always active; other tiers may be toggled by admins.
       if ($isFree) {
-        $row['enabled'] = [
+        $row['active'] = [
           '#type'          => 'checkbox',
-          '#title'         => $this->t('Enabled'),
+          '#title'         => $this->t('Active'),
           '#title_display' => 'invisible',
           '#default_value' => TRUE,
           '#disabled'      => TRUE,
         ];
       }
       else {
-        $row['enabled'] = [
+        $row['active'] = [
           '#type'          => 'checkbox',
-          '#title'         => $this->t('Enabled'),
+          '#title'         => $this->t('Active'),
           '#title_display' => 'invisible',
-          '#default_value' => (bool) ($tier['enabled'] ?? TRUE),
+          '#default_value' => (bool) ($tier['active'] ?? TRUE),
         ];
       }
 
@@ -295,8 +295,8 @@ class TiersForm extends ConfigFormBase {
       $saved[$tierId] = [
         'label'    => trim((string) ($row['label'] ?? ucfirst($tierId))),
         'weight'   => (int) ($row['weight'] ?? 0),
-        // Free is always enabled; disabled checkbox submits 0 so force TRUE.
-        'enabled'  => $isFree ? TRUE : (bool) ($row['enabled'] ?? TRUE),
+        // Free is always active; disabled checkbox submits 0 so force TRUE.
+        'active'   => $isFree ? TRUE : (bool) ($row['active'] ?? TRUE),
         'features' => $features,
       ];
     }
@@ -326,7 +326,7 @@ class TiersForm extends ConfigFormBase {
     return [
       'label'    => $label,
       'weight'   => $weight,
-      'enabled'  => TRUE,
+      'active'   => TRUE,
       'features' => array_fill_keys(array_keys(self::FEATURES), FALSE),
     ];
   }

@@ -428,6 +428,39 @@ function license_service_update_10001(): void {
 }
 
 /**
+ * Renames the per-tier `enabled` config key to `active`.
+ *
+ * The `license_service_subscriptions` sub-module uses `active` to align with
+ * the subscription plan lifecycle vocabulary. This update migrates any stored
+ * `license_service.tiers` config that still carries the old `enabled` key.
+ * Sites installed fresh from this version already have `active`; this hook
+ * is a no-op for them.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_update_10002(): void {
+  $config = \Drupal::configFactory()->getEditable('license_service.tiers');
+  $tiers  = (array) ($config->get('tiers') ?? []);
+
+  $changed = FALSE;
+  foreach ($tiers as $id => $data) {
+    if (is_array($data) && array_key_exists('enabled', $data)) {
+      $data['active'] = $data['enabled'];
+      unset($data['enabled']);
+      $tiers[$id] = $data;
+      $changed = TRUE;
+    }
+  }
+
+  if ($changed) {
+    $config->set('tiers', $tiers)->save();
+    // Rebuild the config schema cache so the renamed key is recognised
+    // immediately without a container rebuild.
+    \Drupal::service('config.typed')->clearCachedDefinitions();
+  }
+}
+
+/**
  * Implements hook_uninstall().
  *
  * Removes all config, cached license data, and secrets.

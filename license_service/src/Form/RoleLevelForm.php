@@ -64,7 +64,7 @@ class RoleLevelForm extends ConfigFormBase {
     // Only enabled tiers (plus free, which is always selectable) appear as options.
     $enabledLevels = array_values(array_filter(
       $levels,
-      static fn(string $l) => $l === 'free' || (bool) ($tiers[$l]['enabled'] ?? TRUE),
+      static fn(string $l) => $l === 'free' || (bool) ($tiers[$l]['active'] ?? TRUE),
     ));
 
     $form['intro'] = [

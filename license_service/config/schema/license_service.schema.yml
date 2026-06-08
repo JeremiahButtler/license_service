@@ -32,7 +32,7 @@ license_service.tiers:
           weight:
             type: integer
             label: 'Sort weight'
-          enabled:
+          active:
             type: boolean
             label: 'Tier is available for assignment'
           features:
