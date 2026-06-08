@@ -18,6 +18,8 @@ services:
       - '@license_service_subscriptions.token'
       - '@queue'
       - '@logger.factory'
+      - '@entity_type.manager'
+      - '@config.factory'
 
   license_service_subscriptions.token:
     class: Drupal\license_service_subscriptions\Service\SubscriptionChoiceTokenService

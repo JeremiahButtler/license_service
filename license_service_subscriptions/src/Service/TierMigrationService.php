@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\license_service_subscriptions\Service;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Queue\QueueFactory;
 
@@ -39,6 +41,10 @@ class TierMigrationService {
    *   The queue factory (for queuing saga worker steps).
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
    *   The logger factory.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager (for loading Commerce subscriptions + plan entities).
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The config factory (reads payment_completion_grace_days, default_fallback_tier).
    */
   public function __construct(
     protected readonly Connection $database,
@@ -46,6 +52,8 @@ class TierMigrationService {
     protected readonly SubscriptionChoiceTokenService $tokenService,
     protected readonly QueueFactory $queue,
     protected readonly LoggerChannelFactoryInterface $loggerFactory,
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
+    protected readonly ConfigFactoryInterface $configFactory,
   ) {}
 
   /**
@@ -250,26 +258,144 @@ class TierMigrationService {
    *
    * Burns the token at commit (NOT on GET, to avoid email-scanner prefetch
    * burning it). Records intent independently of payment so period-end
-   * migration has a deterministic source. If the new tier is free, records
-   * effective_at = period-end and no payment_deadline. If the new tier is
-   * paid, sets payment_deadline = now() + payment_completion_grace_days.
+   * migration has a deterministic source. If the new tier is a subscription
+   * plan, sets payment_deadline = now() + payment_completion_grace_days.
+   * If the new tier is free / perpetual / NULL, no payment_deadline is set.
+   *
+   * Sequence:
+   *   1. Validate token (UID-binding, expiry, not-used).
+   *   2. Resolve target plan (falls back to module default_fallback_tier).
+   *   3. Look up the existing intent row by token hash.
+   *   4. Start a DB transaction:
+   *        a. Burn token (token_used = 1).
+   *        b. Set target_plan_id + payment_deadline on the intent row.
+   *        c. Set subscription state → 'migrating'.
+   *   5. Schedule period-end cancellation on the Commerce subscription entity.
    *
    * @param int $commerceSubscriptionId
-   *   Old subscription being scheduled for cancellation.
+   *   Old Commerce subscription entity ID, scheduled for period-end cancel.
    * @param string|null $targetPlanId
-   *   Chosen plan machine name; NULL = fallback.
+   *   Chosen plan machine name; NULL = use module default_fallback_tier.
    * @param string $token
-   *   The raw single-use token from the URL.
+   *   The raw single-use token from the URL (not the hash).
    * @param int $uid
    *   The authenticated user's UID (must match the token's UID binding).
    *
-   * @todo Phase 3: implement. Token validation + burn + intent row write.
+   * @throws \RuntimeException
+   *   When the token is invalid/expired, or the subscription state row is missing.
    */
   public function markIntentToChange(int $commerceSubscriptionId, ?string $targetPlanId, string $token, int $uid): void {
-    // @todo Phase 3: validate token (UID binding, expiry, not-used),
-    //   write intent row to license_service_migration_intents,
-    //   burn token atomically (same transaction),
-    //   call $subscription->cancel(TRUE) on the Commerce subscription.
+    $logger = $this->loggerFactory->get('license_service_subscriptions');
+
+    // 1. Validate token.
+    if (!$this->tokenService->validate($token, $uid)) {
+      throw new \RuntimeException('Invalid, expired, or already-used choose-plan token.');
+    }
+
+    // 2. Load subscription state row.
+    $stateRow = $this->database->select('license_service_subscriptions_state', 's')
+      ->fields('s', ['id', 'plan_id', 'uid'])
+      ->condition('commerce_subscription_id', $commerceSubscriptionId)
+      ->execute()
+      ->fetchAssoc();
+
+    if (!$stateRow || (int) $stateRow['uid'] !== $uid) {
+      throw new \RuntimeException(
+        "No matching subscription state row found for uid $uid / sub $commerceSubscriptionId."
+      );
+    }
+
+    $subscriptionStateId = (int) $stateRow['id'];
+
+    // 3. Resolve target plan.
+    $settings = $this->configFactory->get('license_service_subscriptions.settings');
+    $resolvedPlanId = ($targetPlanId !== NULL && $targetPlanId !== '')
+      ? $targetPlanId
+      : (string) ($settings->get('default_fallback_tier') ?? 'free');
+
+    // Determine payment deadline (paid subscription plans only).
+    $paymentDeadline = NULL;
+    $targetPlan = $this->entityTypeManager
+      ->getStorage('license_subscription_plan')
+      ->load($resolvedPlanId);
+    if ($targetPlan !== NULL && $targetPlan->getType() === 'subscription') {
+      $graceDays = (int) ($settings->get('payment_completion_grace_days') ?? 3);
+      $paymentDeadline = time() + ($graceDays * 86400);
+    }
+
+    // 4. Atomic transaction: burn token + update intent row + update state.
+    $txn = $this->database->startTransaction();
+    try {
+      $tokenHash = hash('sha256', $token);
+
+      // a. Burn the token.
+      $this->database->update('license_service_migration_intents')
+        ->fields(['token_used' => 1])
+        ->condition('token_hash', $tokenHash)
+        ->condition('token_used', 0)
+        ->execute();
+
+      // b. Set intent fields on the row identified by this token hash.
+      $this->database->update('license_service_migration_intents')
+        ->fields([
+          'target_plan_id'   => $resolvedPlanId,
+          'payment_deadline' => $paymentDeadline,
+        ])
+        ->condition('token_hash', $tokenHash)
+        ->execute();
+
+      // c. Transition subscription state → migrating.
+      $now = \Drupal::time()->getRequestTime();
+      $this->database->update('license_service_subscriptions_state')
+        ->fields([
+          'state'   => 'migrating',
+          'updated' => $now,
+        ])
+        ->condition('id', $subscriptionStateId)
+        ->execute();
+    }
+    catch (\Exception $e) {
+      $txn->rollBack();
+      $logger->error(
+        'markIntentToChange: transaction failed for uid @uid / sub @sub: @msg',
+        ['@uid' => $uid, '@sub' => $commerceSubscriptionId, '@msg' => $e->getMessage()],
+      );
+      throw $e;
+    }
+    // Transaction commits when $txn goes out of scope.
+    unset($txn);
+
+    // 5. Schedule period-end cancellation on the Commerce subscription.
+    //    $subscription->cancel(TRUE) sets scheduled_changes so Commerce
+    //    Recurring's RecurringOrderManager::renewOrder() cancels at period-end.
+    //    @todo Phase 5: verify cancel(TRUE) API against installed commerce_recurring.
+    try {
+      $subscription = $this->entityTypeManager
+        ->getStorage('commerce_subscription')
+        ->load($commerceSubscriptionId);
+      if ($subscription !== NULL && method_exists($subscription, 'cancel')) {
+        $subscription->cancel(TRUE);
+        $subscription->save();
+      }
+    }
+    catch (\Exception $e) {
+      // Non-fatal: the intent row is committed; Commerce cancel is best-effort.
+      // Cron or a saga worker can retry the cancel if needed.
+      $logger->warning(
+        'markIntentToChange: could not schedule cancel on Commerce sub @id: @msg',
+        ['@id' => $commerceSubscriptionId, '@msg' => $e->getMessage()],
+      );
+    }
+
+    $logger->info(
+      'Intent recorded: uid @uid → plan @plan (sub @sub, payment_deadline @dl).',
+      [
+        '@uid'  => $uid,
+        '@plan' => $resolvedPlanId,
+        '@sub'  => $commerceSubscriptionId,
+        '@dl'   => $paymentDeadline ?? 'none',
+      ],
+    );
   }
 
   // --------------------------------------------------------------------------

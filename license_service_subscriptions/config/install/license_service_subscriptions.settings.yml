@@ -1,0 +1,38 @@
+# Default settings for License Service: Subscriptions.
+# All values are editable via the Subscription Settings admin form
+# at /admin/config/license-service/subscriptions/settings.
+#
+# Author: Jeremiah Buttler.
+
+# Machine name of the tier that deprecated-plan subscribers fall back to
+# when they make no explicit choice before the migration deadline.
+# Must match a key in license_service.tiers.
+default_fallback_tier: 'free'
+
+# Days after a plan is deprecated (or payment fails) before a subscriber
+# is force-migrated to the fallback tier. During this window they keep
+# their current access and receive choose-plan notification emails.
+grace_window_days: 7
+
+# Days between admin clicking "Force Migrate Now" and the actual migration.
+# Gives the user time to react before access changes.
+force_migrate_grace_days: 3
+
+# Send email notifications for deprecation, renewal, and payment events.
+notification_enabled: true
+
+# Days before the migration deadline to send the choose-plan email link.
+# Must be <= grace_window_days.
+choice_window_days: 14
+
+# Days after a user submits a choose-plan intent for a PAID plan to
+# complete checkout. If checkout is not completed by this deadline the
+# fallback tier applies.
+payment_completion_grace_days: 3
+
+# Days before a subscription renewal date to send the renewal reminder email.
+renewal_reminder_days: 7
+
+# Maximum days a subscription may remain paused (state = paused) before
+# hook_cron() auto-revokes its roles.
+max_pause_days: 90

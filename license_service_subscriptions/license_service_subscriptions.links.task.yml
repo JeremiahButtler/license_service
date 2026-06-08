@@ -1,5 +1,29 @@
+# ── Top-level tab (on the License Service settings page) ──────────────────────
+# Shows "Subscriptions" as a sibling tab alongside LVS Settings, Tiers, etc.
 license_service_subscriptions.plans.tab:
   route_name: entity.license_subscription_plan.collection
   title: Subscriptions
   base_route: license_service.settings
   weight: 15
+
+# ── Sub-tabs (within the Subscriptions section) ────────────────────────────────
+# "Plans" is the default view (the collection list).
+license_service_subscriptions.sub.plans:
+  route_name: entity.license_subscription_plan.collection
+  title: Plans
+  base_route: entity.license_subscription_plan.collection
+  weight: 0
+
+# "Settings" tab — deprecation and renewal pipeline configuration.
+license_service_subscriptions.sub.settings:
+  route_name: license_service_subscriptions.settings
+  title: Settings
+  base_route: entity.license_subscription_plan.collection
+  weight: 5
+
+# "Subscribers" tab — read-only report of all subscription state rows.
+license_service_subscriptions.sub.subscribers:
+  route_name: license_service_subscriptions.subscribers
+  title: Subscribers
+  base_route: entity.license_subscription_plan.collection
+  weight: 10
