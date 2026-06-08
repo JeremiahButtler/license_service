@@ -1,0 +1,60 @@
+license_service_subscriptions.plan.*:
+  type: config_entity
+  label: 'Subscription Plan'
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Label'
+    uuid:
+      type: string
+      label: 'UUID'
+    tier_id:
+      type: string
+      label: 'License tier machine name'
+    product_variation_ids:
+      type: sequence
+      label: 'Commerce product variation IDs mapped to this plan'
+      sequence:
+        type: string
+        label: 'Commerce product variation ID'
+    active:
+      type: boolean
+      label: 'Plan accepts new subscriptions'
+    type:
+      type: string
+      label: 'Plan type: subscription or perpetual'
+    fallback_tier:
+      type: string
+      label: 'Fallback tier when this plan is deprecated (overrides module default)'
+
+license_service_subscriptions.settings:
+  type: config_object
+  label: 'License Service Subscriptions settings'
+  mapping:
+    default_fallback_tier:
+      type: string
+      label: 'Default fallback tier for deprecated plans'
+    grace_window_days:
+      type: integer
+      label: 'Days before migrating a subscriber from a deprecated or payment-failed plan'
+    force_migrate_grace_days:
+      type: integer
+      label: 'Days before migrating when admin uses Force-Migrate-Now'
+    notification_enabled:
+      type: boolean
+      label: 'Send email notifications for deprecation and renewal events'
+    choice_window_days:
+      type: integer
+      label: 'Days before migration deadline to send the choose-plan email link'
+    payment_completion_grace_days:
+      type: integer
+      label: 'Days after intent submission to complete checkout before fallback applies'
+    renewal_reminder_days:
+      type: integer
+      label: 'Days before renewal to send the reminder email'
+    max_pause_days:
+      type: integer
+      label: 'Maximum days a subscription may remain paused before auto-revocation'

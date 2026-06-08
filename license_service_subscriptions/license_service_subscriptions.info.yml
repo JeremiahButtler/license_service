@@ -1,0 +1,12 @@
+name: 'License Service: Subscriptions'
+type: module
+description: 'Bridges Drupal Commerce / Commerce Recurring into the License Service tier-gating system. Manages subscription plans, lifecycle events, role grants, user-choice migration, and the plan-deprecation state machine.'
+core_version_requirement: ^10 || ^11
+package: License Service
+dependencies:
+  - license_service:license_service
+  - commerce:commerce
+  - commerce:commerce_product
+  - commerce:commerce_order
+  - commerce:commerce_payment
+  - commerce_recurring:commerce_recurring

@@ -1,0 +1,298 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for License Service: Subscriptions.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_schema().
+ *
+ * Three tables:
+ *   - license_service_subscriptions_state — active subscription grant records.
+ *   - license_service_migrations          — immutable audit/idempotency log.
+ *   - license_service_migration_intents   — choose-plan intent tokens.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_subscriptions_schema(): array {
+  $schema = [];
+
+  // ── Subscription state ────────────────────────────────────────────────────
+  $schema['license_service_subscriptions_state'] = [
+    'description' => 'Active subscription grant records. One row per user per Commerce subscription.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Drupal user ID.',
+      ],
+      'plan_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Machine name of the LicenseSubscriptionPlan config entity.',
+      ],
+      'commerce_subscription_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'commerce_subscription entity ID.',
+      ],
+      'state' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => 'active',
+        'description' => 'Lifecycle state: active, paused, migrating, payment_method_failing, canceled.',
+      ],
+      'granted_by_action' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => 'subscription',
+        'description' => 'Origin of the grant: subscription, manual_admin, import_migration, trial.',
+      ],
+      'effective_from' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp when this grant became effective.',
+      ],
+      'effective_until' => [
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'Unix timestamp when this grant expires; NULL = ongoing.',
+      ],
+      'last_reminder_sent_at' => [
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'Unix timestamp of the last pre-renewal or deprecation reminder email. NULL = never sent.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp of row creation.',
+      ],
+      'updated' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp of last update.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'commerce_subscription' => ['commerce_subscription_id'],
+    ],
+    'indexes' => [
+      'uid_state' => ['uid', 'state'],
+      'plan_id' => ['plan_id'],
+    ],
+  ];
+
+  // ── Audit / migration log ─────────────────────────────────────────────────
+  $schema['license_service_migrations'] = [
+    'description' => 'Append-only audit log for subscription state transitions. event_key column enforces idempotency.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Drupal user ID.',
+      ],
+      'from_plan_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => FALSE,
+        'description' => 'Plan that was revoked. NULL for standalone grants.',
+      ],
+      'to_plan_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => FALSE,
+        'description' => 'Plan that was applied. NULL for standalone revocations.',
+      ],
+      'event_type' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'plan_deprecated | renewal_payment_failed | admin_force_migrated | access_revoked_refund | payment_partially_refunded.',
+      ],
+      'event_key' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Idempotency key. UNIQUE prevents duplicate processing from webhook replays.',
+      ],
+      'commerce_subscription_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'description' => 'Source commerce_subscription entity ID.',
+      ],
+      'commerce_order_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'description' => 'Related commerce_order entity ID.',
+      ],
+      'force_migrated' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => '1 if triggered by admin Force-Migrate-Now; 0 otherwise.',
+      ],
+      'raw_json' => [
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => FALSE,
+        'description' => 'Full event payload for audit purposes.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp of row creation.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'event_key' => ['event_key'],
+    ],
+    'indexes' => [
+      'uid' => ['uid'],
+      'event_type' => ['event_type'],
+      'commerce_subscription_id' => ['commerce_subscription_id'],
+    ],
+  ];
+
+  // ── Choose-plan intents ───────────────────────────────────────────────────
+  $schema['license_service_migration_intents'] = [
+    'description' => 'Single-use choose-plan tokens and recorded migration intents.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Drupal user ID. Token is UID-bound; rejected if opened by a different account.',
+      ],
+      'subscription_state_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'FK to license_service_subscriptions_state.id.',
+      ],
+      'target_plan_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => FALSE,
+        'description' => 'Chosen plan. NULL = user chose the default fallback or no choice yet.',
+      ],
+      'token_hash' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'SHA-256 hex of the single-use token string. Never store the raw token.',
+      ],
+      'token_used' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => '1 once the token has been burned at mark_intent_to_change commit.',
+      ],
+      'token_expires' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp when the token expires (TTL default 7 days).',
+      ],
+      'payment_deadline' => [
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'Unix timestamp by which checkout must be completed. payment_completion_grace_days after intent submission.',
+      ],
+      'effective_at' => [
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'Unix timestamp when the migration should apply (period end of old subscription).',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp of row creation.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'token_hash' => ['token_hash'],
+    ],
+    'indexes' => [
+      'uid' => ['uid'],
+      'subscription_state_id' => ['subscription_state_id'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Drops all three state tables and deletes all stored plan config entities.
+ * Author: Jeremiah Buttler.
+ */
+function license_service_subscriptions_uninstall(): void {
+  $database = \Drupal::database();
+  $schema   = $database->schema();
+  foreach (['license_service_migration_intents', 'license_service_migrations', 'license_service_subscriptions_state'] as $table) {
+    if ($schema->tableExists($table)) {
+      $schema->dropTable($table);
+    }
+  }
+
+  // Delete all LicenseSubscriptionPlan config entities.
+  $storage = \Drupal::entityTypeManager()->getStorage('license_subscription_plan');
+  $plans   = $storage->loadMultiple();
+  if ($plans) {
+    $storage->delete($plans);
+  }
+}

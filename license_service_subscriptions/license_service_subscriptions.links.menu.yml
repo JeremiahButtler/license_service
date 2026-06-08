@@ -1,0 +1,6 @@
+license_service_subscriptions.admin:
+  title: 'Subscriptions'
+  description: 'Manage subscription plans and view subscriber reports.'
+  route_name: entity.license_subscription_plan.collection
+  parent: license_service.admin
+  weight: 15

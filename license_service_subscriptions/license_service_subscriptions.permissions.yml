@@ -1,0 +1,4 @@
+administer license subscriptions:
+  title: 'Administer License Service Subscriptions'
+  description: 'Create, edit, and delete subscription plans; view subscriber reports; trigger plan migrations and Force-Migrate-Now.'
+  restrict access: true

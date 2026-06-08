@@ -1,0 +1,24 @@
+services:
+
+  license_service_subscriptions.role_grant:
+    class: Drupal\license_service_subscriptions\Service\SubscriptionRoleGrantService
+    arguments:
+      - '@entity_type.manager'
+      - '@license_service.license_manager'
+      - '@license_service.seat_cap'
+      - '@logger.factory'
+
+  license_service_subscriptions.migration:
+    class: Drupal\license_service_subscriptions\Service\TierMigrationService
+    arguments:
+      - '@database'
+      - '@license_service_subscriptions.role_grant'
+      - '@license_service_subscriptions.token'
+      - '@queue'
+      - '@logger.factory'
+
+  license_service_subscriptions.token:
+    class: Drupal\license_service_subscriptions\Service\SubscriptionChoiceTokenService
+    arguments:
+      - '@database'
+      - '@config.factory'

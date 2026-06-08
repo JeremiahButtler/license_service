@@ -1,0 +1,23 @@
+{
+  "name": "license-service/license-service-subscriptions",
+  "description": "Drupal Commerce bridge for the License Service module. Manages subscription plans, lifecycle events, and tier-based access via Commerce Recurring.",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Jeremiah Buttler",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.1",
+    "drupal/commerce": "^2.0",
+    "drupal/commerce_recurring": "^1.0",
+    "license-service/license-service": "dev-main"
+  },
+  "autoload": {
+    "psr-4": {
+      "Drupal\\license_service_subscriptions\\": "src/"
+    }
+  }
+}

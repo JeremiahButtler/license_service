@@ -1,0 +1,5 @@
+license_service_subscriptions.plans.tab:
+  route_name: entity.license_subscription_plan.collection
+  title: Subscriptions
+  base_route: license_service.settings
+  weight: 15
