@@ -44,6 +44,7 @@ services:
     arguments:
       - '@license_service_subscriptions.migration'
       - '@license_service_subscriptions.notification'
+      - '@entity_type.manager'
     tags:
       - { name: event_subscriber }
 

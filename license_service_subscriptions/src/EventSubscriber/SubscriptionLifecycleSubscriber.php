@@ -6,6 +6,7 @@ namespace Drupal\license_service_subscriptions\EventSubscriber;
 
 use Drupal\commerce_recurring\Event\PaymentDeclinedEvent;
 use Drupal\commerce_recurring\Event\RecurringEvents;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\license_service_subscriptions\Service\SubscriptionNotificationService;
 use Drupal\license_service_subscriptions\Service\TierMigrationService;
 use Drupal\state_machine\Event\WorkflowTransitionEvent;
@@ -29,10 +30,15 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  *
  * Author: Jeremiah Buttler.
  *
- * @todo Phase 5: verify state-machine event names and WorkflowTransitionEvent
- *   method signatures against the installed Commerce / state_machine versions.
- * @todo Phase 5: verify RecurringEvents constants and PaymentDeclinedEvent
- *   method signatures against the installed commerce_recurring version.
+ * Phase 5 source verification (2026-06-08) — all event names and API method
+ * signatures confirmed against live drupalcode.org source:
+ *   - commerce_subscription.*.post_transition event names: CONFIRMED.
+ *   - RecurringEvents::PAYMENT_DECLINED = 'commerce_recurring.payment_declined': CONFIRMED.
+ *   - WorkflowTransitionEvent::getEntity() + SubscriptionInterface::getCustomerId(): CONFIRMED.
+ *   - getPurchasedEntityId() is the correct variation accessor (getVariationId() absent): CONFIRMED.
+ *   - getNextRenewalTime() returns int Unix timestamp: CONFIRMED.
+ *   - cancel(TRUE) does period-end cancel: CONFIRMED.
+ *   - PaymentDeclinedEvent has NO getSubscription() — fixed below via getOrder() + entity query.
  */
 class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
 
@@ -43,10 +49,13 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
    *   The tier migration service (state machine + saga enqueueing).
    * @param \Drupal\license_service_subscriptions\Service\SubscriptionNotificationService $notificationService
    *   The notification service (sends payment_failing email on declined payment).
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager (subscription lookup by order in onPaymentDeclined).
    */
   public function __construct(
     protected readonly TierMigrationService $migrationService,
     protected readonly SubscriptionNotificationService $notificationService,
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
   ) {}
 
   /**
@@ -55,9 +64,8 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
   public static function getSubscribedEvents(): array {
     // State Machine dispatches "{entity_type}.{transition_id}.post_transition"
     // for every workflow transition that completes. These are the canonical
-    // Commerce Recurring subscription lifecycle transitions.
-    //
-    // @todo Phase 5: if commerce_recurring patches state names, update below.
+    // Commerce Recurring subscription lifecycle transitions (verified 2026-06-08
+    // against live drupalcode.org source).
     return [
       'commerce_subscription.activate.post_transition' => ['onSubscriptionActivate', 0],
       'commerce_subscription.cancel.post_transition'   => ['onSubscriptionCancel', 0],
@@ -86,7 +94,6 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
     $commerceSubscriptionId = (int) $subscription->id();
 
     // Resolve the plan from the subscription's product variation.
-    // @todo Phase 5: confirm getItems() or variation resolver for plan lookup.
     $planId = $this->resolvePlanId($subscription);
     if ($planId === NULL) {
       // No matching plan configured — nothing to grant.
@@ -176,17 +183,33 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
    *
    * @param \Drupal\commerce_recurring\Event\PaymentDeclinedEvent $event
    *   The payment-declined event.
-   *
-   * @todo Phase 5: verify PaymentDeclinedEvent::getSubscription() exists and
-   *   getOrder() vs getPayment() for the failed order.
    */
   public function onPaymentDeclined(PaymentDeclinedEvent $event): void {
     if (\Drupal::isConfigSyncing()) {
       return;
     }
 
-    $subscription = $event->getSubscription();
-    $commerceSubscriptionId = (int) $subscription->id();
+    // PaymentDeclinedEvent exposes getOrder() only — there is no
+    // getSubscription() method (verified 2026-06-08 against source).
+    // Load the Commerce subscription by querying the 'orders' multi-value
+    // reference field: a subscription tracks all its recurring orders there.
+    $order = $event->getOrder();
+    $subscriptionIds = $this->entityTypeManager
+      ->getStorage('commerce_subscription')
+      ->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('orders', (int) $order->id())
+      ->execute();
+
+    if (empty($subscriptionIds)) {
+      \Drupal::logger('license_service_subscriptions')->warning(
+        'onPaymentDeclined: no subscription found for order @order; skipping.',
+        ['@order' => $order->id()],
+      );
+      return;
+    }
+
+    $commerceSubscriptionId = (int) reset($subscriptionIds);
     $now = \Drupal::time()->getRequestTime();
 
     // Update state row: set state=payment_method_failing and record
@@ -254,14 +277,12 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
    *
    * @return string|null
    *   The plan machine name, or NULL if no plan matches.
-   *
-   * @todo Phase 5: verify correct API for retrieving variation ID from
-   *   SubscriptionInterface (getVariationId() vs getType() vs items).
    */
   protected function resolvePlanId($subscription): ?string {
-    // @todo Phase 5: confirm the variation ID accessor on SubscriptionInterface.
-    // Common candidates: $subscription->getPurchasedEntityId(),
-    // $subscription->getVariationId(), or via getItems().
+    // getPurchasedEntityId() is the correct accessor (verified 2026-06-08):
+    // returns the target entity ID of the 'purchased_entity' field — which for
+    // a product-variation subscription is the variation entity ID.
+    // getVariationId() does not exist; the fallback is kept as dead-safe guard.
     $variationId = NULL;
     if (method_exists($subscription, 'getPurchasedEntityId')) {
       $variationId = (string) $subscription->getPurchasedEntityId();
@@ -275,7 +296,7 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
     }
 
     /** @var \Drupal\license_service_subscriptions\Entity\LicenseSubscriptionPlan[] $plans */
-    $plans = \Drupal::entityTypeManager()
+    $plans = $this->entityTypeManager
       ->getStorage('license_subscription_plan')
       ->loadMultiple();
 

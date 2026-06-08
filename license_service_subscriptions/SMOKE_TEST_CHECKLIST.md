@@ -2,12 +2,19 @@
 
 Use this checklist on a dev environment that has Drupal Commerce + Commerce
 Recurring + Commerce Stripe installed before enabling the sub-module on any
-production site. Each item corresponds to a `@todo Phase 5: verify` marker in
-the source code; the marker location is listed so you can find the code quickly.
+production site.
+
+**Source-verification status (2026-06-08):** Items 1–8 were verified by
+reading the live `8.x-1.x` / `3.x` source on `git.drupalcode.org`. Items
+marked ✅ require no further action. Item 6 had a code defect that was **fixed
+in the same session** (see source note below). Item 9 still requires a live
+environment.
 
 ---
 
-## 1. Commerce Recurring — state-machine event names
+## 1. ✅ Commerce Recurring — state-machine event names
+
+**Source-verified 2026-06-08.** All event names confirmed. `RecurringEvents::PAYMENT_DECLINED = 'commerce_recurring.payment_declined'`. The `commerce_subscription.*` prefix comes from the workflow group ID in `commerce_recurring.workflow_groups.yml`. No code change needed.
 
 **File:** `src/EventSubscriber/SubscriptionLifecycleSubscriber.php` (lines 62–66)
 
@@ -38,7 +45,7 @@ The subscriber wires these event names:
 
 ---
 
-## 2. WorkflowTransitionEvent — entity accessor
+## 2. ✅ WorkflowTransitionEvent — entity accessor
 
 **File:** `src/EventSubscriber/SubscriptionLifecycleSubscriber.php` (lines 84–85, 128–129, 155–156)
 
@@ -58,7 +65,7 @@ $uid = (int) $subscription->getCustomerId();
 
 ---
 
-## 3. SubscriptionInterface — variation ID accessor
+## 3. ✅ SubscriptionInterface — variation ID accessor
 
 **File:** `src/EventSubscriber/SubscriptionLifecycleSubscriber.php` (lines 266–271, `resolvePlanId()` method)
 
@@ -81,7 +88,7 @@ elseif (method_exists($subscription, 'getVariationId')) { ... }
 
 ---
 
-## 4. SubscriptionInterface — next renewal time
+## 4. ✅ SubscriptionInterface — next renewal time
 
 **File:** `license_service_subscriptions.module` (hook_cron, Section 1 — renewal reminders)
 
@@ -102,7 +109,7 @@ if (method_exists($subscription, 'getNextRenewalTime')) {
 
 ---
 
-## 5. SubscriptionInterface — period-end cancel API
+## 5. ✅ SubscriptionInterface — period-end cancel API
 
 **File:** `src/Service/TierMigrationService.php` (lines 380–383, `markIntentToChange()`)
 
@@ -125,25 +132,25 @@ if ($subscription !== NULL && method_exists($subscription, 'cancel')) {
 
 ---
 
-## 6. PaymentDeclinedEvent — accessor methods
+## 6. ✅ PaymentDeclinedEvent — accessor methods (BUG FIXED)
 
-**File:** `src/EventSubscriber/SubscriptionLifecycleSubscriber.php` (lines 188–189)
+**Source-verified 2026-06-08. Bug found and fixed.**
 
-```php
-$subscription = $event->getSubscription();
-```
+`PaymentDeclinedEvent` has **no** `getSubscription()` method. The event
+exposes only `getOrder()`, `getRetryDays()`, `getNumRetries()`,
+`getMaxRetries()`, and `getException()`.
 
-**Verify:**
+**Fix applied:** `onPaymentDeclined` now calls `$event->getOrder()` then
+performs an entity query on `commerce_subscription` storage, filtering on the
+`orders` multi-value reference field (subscriptions track all their recurring
+orders there). `EntityTypeManagerInterface` was injected into the subscriber's
+constructor and added to `license_service_subscriptions.services.yml`.
 
-- `\Drupal\commerce_recurring\Event\PaymentDeclinedEvent::getSubscription()`
-  exists and returns a `SubscriptionInterface` entity.
-- There is no ambiguity with `getOrder()` or `getPayment()` if the event carries
-  multiple entities. Confirm `getSubscription()` is the correct method for the
-  UID and subscription ID.
+**File:** `src/EventSubscriber/SubscriptionLifecycleSubscriber.php` (lines ~188+)
 
 ---
 
-## 7. PaymentRefundSubscriber — event name and accessor methods
+## 7. ✅ PaymentRefundSubscriber — event name and accessor methods
 
 **File:** `src/EventSubscriber/PaymentRefundSubscriber.php`
 
@@ -177,7 +184,7 @@ $order = $payment->getOrder();
 
 ---
 
-## 8. Subscription entity storage machine name
+## 8. ✅ Subscription entity storage machine name
 
 **File:** `src/Service/TierMigrationService.php` (line 379)
 
