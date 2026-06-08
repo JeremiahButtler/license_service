@@ -32,9 +32,13 @@ class SubscribersController extends ControllerBase {
    */
   public function __construct(
     protected readonly Connection $database,
-    protected readonly EntityTypeManagerInterface $entityTypeManager,
+    EntityTypeManagerInterface $entityTypeManager,
     protected readonly DateFormatterInterface $dateFormatter,
-  ) {}
+  ) {
+    // $entityTypeManager is declared non-readonly on ControllerBase; assign
+    // rather than re-promoting to avoid a PHP fatal on readonly redeclaration.
+    $this->entityTypeManager = $entityTypeManager;
+  }
 
   /**
    * {@inheritdoc}
