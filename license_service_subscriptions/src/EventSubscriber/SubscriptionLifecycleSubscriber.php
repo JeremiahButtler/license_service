@@ -18,7 +18,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  *   - commerce_subscription.activate.post_transition  — new/resumed activation
  *   - commerce_subscription.cancel.post_transition    — cancellation (period-end)
  *   - commerce_subscription.expire.post_transition    — hard expiry
- *   - commerce_recurring.payment_declined             — dunning/payment failure
+ *   - commerce_recurring.payment_declined             — dunning/payment failure.
  *
  * State-mutating calls are enqueued as idempotent saga items via
  * TierMigrationService; they are NOT executed synchronously in the event
@@ -261,7 +261,7 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
   protected function resolvePlanId($subscription): ?string {
     // @todo Phase 5: confirm the variation ID accessor on SubscriptionInterface.
     // Common candidates: $subscription->getPurchasedEntityId(),
-    //   $subscription->getVariationId(), or via getItems().
+    // $subscription->getVariationId(), or via getItems().
     $variationId = NULL;
     if (method_exists($subscription, 'getPurchasedEntityId')) {
       $variationId = (string) $subscription->getPurchasedEntityId();

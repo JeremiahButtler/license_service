@@ -22,7 +22,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 /**
  * Unit tests for TierMigrationService suspend/resume operations.
  *
- * suspendSubscription() and resumeSubscription() are the cleanest state-machine
+ * SuspendSubscription() and resumeSubscription() are the cleanest state-machine
  * operations to unit-test: they call \Drupal::time() and a single DB UPDATE with
  * well-defined WHERE conditions, making their behavior fully verifiable via mocks.
  *
@@ -70,7 +70,7 @@ class TierMigrationServiceTest extends UnitTestCase {
    * Builds an Update query mock returning $rowsAffected from execute().
    */
   private function buildUpdateMock(int $rowsAffected = 1): Update {
-    /** @var Update&\PHPUnit\Framework\MockObject\MockObject $update */
+    /** @var \Drupal\Core\Database\Query\Update&\PHPUnit\Framework\MockObject\MockObject $update */
     $update = $this->getMockBuilder(Update::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['fields', 'condition', 'execute'])
@@ -119,13 +119,14 @@ class TierMigrationServiceTest extends UnitTestCase {
    * @covers ::suspendSubscription
    */
   public function testSuspendSubscriptionCallsUpdateWithPausedState(): void {
-    $update = $this->buildUpdateMock(1); // 1 row updated = active sub found
+    // 1 row updated = active sub found
+    $update = $this->buildUpdateMock(1);
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
 
     // Verify update() is called on the right table.
     $db->expects($this->once())
@@ -142,13 +143,14 @@ class TierMigrationServiceTest extends UnitTestCase {
    * @covers ::suspendSubscription
    */
   public function testSuspendSubscriptionDoesNotThrowWhenNoActiveRowExists(): void {
-    $update = $this->buildUpdateMock(0); // 0 rows updated = sub not active
+    // 0 rows updated = sub not active
+    $update = $this->buildUpdateMock(0);
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->method('update')->willReturn($update);
 
     // No exception expected; logger->info() is NOT called when 0 rows affected.
@@ -165,11 +167,11 @@ class TierMigrationServiceTest extends UnitTestCase {
   public function testSuspendSubscriptionLogsInfoWhenRowIsUpdated(): void {
     $update = $this->buildUpdateMock(1);
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->method('update')->willReturn($update);
 
     // logger->info() must be called exactly once when 1 row is updated.
@@ -190,11 +192,11 @@ class TierMigrationServiceTest extends UnitTestCase {
   public function testResumeSubscriptionCallsUpdateWithActiveState(): void {
     $update = $this->buildUpdateMock(1);
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
 
     $db->expects($this->once())
       ->method('update')
@@ -209,13 +211,14 @@ class TierMigrationServiceTest extends UnitTestCase {
    * @covers ::resumeSubscription
    */
   public function testResumeSubscriptionDoesNotThrowWhenNoRowIsPaused(): void {
-    $update = $this->buildUpdateMock(0); // 0 rows = subscription was not paused
+    // 0 rows = subscription was not paused
+    $update = $this->buildUpdateMock(0);
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->method('update')->willReturn($update);
 
     $logger = $this->createMock(LoggerChannelInterface::class);
@@ -231,11 +234,11 @@ class TierMigrationServiceTest extends UnitTestCase {
   public function testResumeSubscriptionLogsInfoWhenRowIsUpdated(): void {
     $update = $this->buildUpdateMock(1);
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->method('update')->willReturn($update);
 
     $logger = $this->createMock(LoggerChannelInterface::class);

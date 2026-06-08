@@ -142,6 +142,7 @@ class ChoosePlanForm extends FormBase {
     ];
 
     // Build plan options from active, non-deprecated plans.
+    /** @var \Drupal\license_service_subscriptions\Entity\LicenseSubscriptionPlanInterface[] $plans */
     $plans = $this->entityTypeManager
       ->getStorage('license_subscription_plan')
       ->loadMultiple();
@@ -199,8 +200,8 @@ class ChoosePlanForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    $token  = (string) ($form_state->get('_choose_plan_token') ?? '');
-    $uid    = (int) $this->currentUser->id();
+    $token = (string) ($form_state->get('_choose_plan_token') ?? '');
+    $uid   = (int) $this->currentUser->id();
 
     // Re-validate the token at submit time to guard against race conditions.
     if (!$this->tokenService->validate($token, $uid)) {

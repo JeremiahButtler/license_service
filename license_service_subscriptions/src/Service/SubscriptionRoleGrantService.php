@@ -59,7 +59,7 @@ class SubscriptionRoleGrantService {
    * Upserts a row in license_service_subscriptions_state with:
    *   - granted_by_action = 'subscription' (or 'trial' when $fromTrial = TRUE)
    *   - state = 'active'
-   *   - roles_json = JSON of the roles actually granted
+   *   - roles_json = JSON of the roles actually granted.
    *
    * @param int $uid
    *   Drupal user ID.
@@ -77,6 +77,7 @@ class SubscriptionRoleGrantService {
     $logger = $this->loggerFactory->get('license_service_subscriptions');
 
     // 1. Load plan → tier.
+    /** @var \Drupal\license_service_subscriptions\Entity\LicenseSubscriptionPlanInterface|null $plan */
     $plan = $this->entityTypeManager
       ->getStorage('license_subscription_plan')
       ->load($planId);

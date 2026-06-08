@@ -9,7 +9,6 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Queue\QueueFactory;
-use Drupal\license_service_subscriptions\Service\SubscriptionNotificationService;
 
 /**
  * Implements the 5-operation plan-deprecation state machine.
@@ -319,6 +318,7 @@ class TierMigrationService {
 
     // Determine payment deadline (paid subscription plans only).
     $paymentDeadline = NULL;
+    /** @var \Drupal\license_service_subscriptions\Entity\LicenseSubscriptionPlanInterface|null $targetPlan */
     $targetPlan = $this->entityTypeManager
       ->getStorage('license_subscription_plan')
       ->load($resolvedPlanId);

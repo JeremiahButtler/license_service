@@ -52,9 +52,9 @@ function license_service_subscriptions_mail(string $key, array &$message, array 
   switch ($key) {
 
     case 'plan_deprecated':
-      $planLabel   = (string) ($params['plan_label'] ?? $params['plan_id'] ?? 'your plan');
+      $planLabel     = (string) ($params['plan_label'] ?? $params['plan_id'] ?? 'your plan');
       $choosePlanUrl = (string) ($params['choose_plan_url'] ?? '');
-      $effectiveAt = isset($params['effective_at']) ? $dateService->format((int) $params['effective_at'], 'medium') : t('soon');
+      $effectiveAt   = isset($params['effective_at']) ? $dateService->format((int) $params['effective_at'], 'medium') : t('soon');
 
       $message['subject'] = t(
         'Action required: Your @plan subscription on @site is being discontinued',
@@ -95,8 +95,8 @@ function license_service_subscriptions_mail(string $key, array &$message, array 
       break;
 
     case 'plan_chosen':
-      $fromLabel = (string) ($params['from_plan_label'] ?? $params['from_plan_id'] ?? 'your old plan');
-      $toLabel   = (string) ($params['to_plan_label'] ?? $params['to_plan_id'] ?? 'your new plan');
+      $fromLabel       = (string) ($params['from_plan_label'] ?? $params['from_plan_id'] ?? 'your old plan');
+      $toLabel         = (string) ($params['to_plan_label'] ?? $params['to_plan_id'] ?? 'your new plan');
       $paymentDeadline = $params['payment_deadline'] ?? NULL;
 
       $message['subject'] = t(
@@ -209,7 +209,8 @@ function license_service_subscriptions_cron(): void {
   // Email subscribers whose subscription renews within renewal_reminder_days,
   // but who have not received a reminder in the past 24 hours.
   $renewalReminderDays = (int) ($config->get('renewal_reminder_days') ?? 7);
-  $reminderCutoff      = $now - 86400; // No more than one reminder per 24h.
+  // No more than one reminder per 24h.
+  $reminderCutoff = $now - 86400;
 
   $reminderCondition = $database->or()
     ->isNull('last_reminder_sent_at')

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\license_service_subscriptions\Form;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -13,7 +14,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Settings form for the subscription deprecation and renewal pipeline.
  *
  * Route: /admin/config/license-service/subscriptions/settings
- * Permission: administer license subscriptions
+ * Permission: administer license subscriptions.
  *
  * Author: Jeremiah Buttler.
  */
@@ -24,16 +25,24 @@ class SubscriptionSettingsForm extends ConfigFormBase {
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfigManager
+   *   The typed config manager.
    */
-  public function __construct(ConfigFactoryInterface $configFactory) {
-    parent::__construct($configFactory);
+  public function __construct(
+    ConfigFactoryInterface $configFactory,
+    TypedConfigManagerInterface $typedConfigManager,
+  ) {
+    parent::__construct($configFactory, $typedConfigManager);
   }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('config.factory'));
+    return new static(
+      $container->get('config.factory'),
+      $container->get('config.typed'),
+    );
   }
 
   /**
@@ -213,8 +222,8 @@ class SubscriptionSettingsForm extends ConfigFormBase {
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     parent::validateForm($form, $form_state);
 
-    $grace   = (int) $form_state->getValue('grace_window_days');
-    $choice  = (int) $form_state->getValue('choice_window_days');
+    $grace  = (int) $form_state->getValue('grace_window_days');
+    $choice = (int) $form_state->getValue('choice_window_days');
 
     if ($choice > $grace) {
       $form_state->setErrorByName(

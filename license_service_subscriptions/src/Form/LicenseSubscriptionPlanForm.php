@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\license_service_subscriptions\Form;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\license_service\LicenseFeatureProviderInterface;

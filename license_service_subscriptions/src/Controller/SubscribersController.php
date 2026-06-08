@@ -14,7 +14,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Renders the Subscribers report page.
  *
  * Route: /admin/config/license-service/subscriptions/subscribers
- * Permission: administer license subscriptions
+ * Permission: administer license subscriptions.
  *
  * Author: Jeremiah Buttler.
  */
@@ -93,7 +93,7 @@ class SubscribersController extends ControllerBase {
 
     $tableRows = [];
     foreach ($rows as $row) {
-      $uid  = (int) $row->uid;
+      $uid = (int) $row->uid;
       $user = $users[$uid] ?? NULL;
       $userName = $user ? $user->getDisplayName() : $this->t('(uid @uid)', ['@uid' => $uid]);
 
@@ -165,19 +165,19 @@ class SubscribersController extends ControllerBase {
    */
   protected function renderStateBadge(string $state): array {
     $map = [
-      'active'                  => ['class' => 'state-active',    'label' => $this->t('Active')],
-      'paused'                  => ['class' => 'state-paused',    'label' => $this->t('Paused')],
+      'active'                  => ['class' => 'state-active', 'label' => $this->t('Active')],
+      'paused'                  => ['class' => 'state-paused', 'label' => $this->t('Paused')],
       'migrating'               => ['class' => 'state-migrating', 'label' => $this->t('Migrating')],
-      'payment_method_failing'  => ['class' => 'state-failing',   'label' => $this->t('Payment failing')],
-      'canceled'                => ['class' => 'state-canceled',  'label' => $this->t('Canceled')],
+      'payment_method_failing'  => ['class' => 'state-failing', 'label' => $this->t('Payment failing')],
+      'canceled'                => ['class' => 'state-canceled', 'label' => $this->t('Canceled')],
     ];
 
     $info = $map[$state] ?? ['class' => 'state-unknown', 'label' => $state];
 
     return [
       '#markup' => '<span class="lss-state ' . htmlspecialchars($info['class']) . '">'
-        . htmlspecialchars($info['label'])
-        . '</span>',
+      . htmlspecialchars($info['label'])
+      . '</span>',
     ];
   }
 

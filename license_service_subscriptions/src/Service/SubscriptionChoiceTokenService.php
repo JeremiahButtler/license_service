@@ -63,8 +63,8 @@ class SubscriptionChoiceTokenService {
    *   256-bit random hex token (64 chars). Embed in the choose-plan URL.
    */
   public function generate(int $uid, int $subscriptionStateId, int $effectiveAt): string {
-    $raw    = bin2hex(random_bytes(32));
-    $hash   = hash('sha256', $raw);
+    $raw  = bin2hex(random_bytes(32));
+    $hash = hash('sha256', $raw);
 
     $ttlDays = (int) ($this->configFactory
       ->get('license_service_subscriptions.settings')

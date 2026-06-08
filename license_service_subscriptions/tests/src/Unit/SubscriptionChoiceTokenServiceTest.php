@@ -51,7 +51,7 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
     $statement = $this->createMock(StatementInterface::class);
     $statement->method('fetchAssoc')->willReturn($row);
 
-    /** @var Select&\PHPUnit\Framework\MockObject\MockObject $select */
+    /** @var \Drupal\Core\Database\Query\Select&\PHPUnit\Framework\MockObject\MockObject $select */
     $select = $this->getMockBuilder(Select::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['fields', 'condition', 'execute'])
@@ -70,7 +70,7 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
    *   Value returned by execute().
    */
   private function buildUpdateMock(int $rowsAffected = 1): Update {
-    /** @var Update&\PHPUnit\Framework\MockObject\MockObject $update */
+    /** @var \Drupal\Core\Database\Query\Update&\PHPUnit\Framework\MockObject\MockObject $update */
     $update = $this->getMockBuilder(Update::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['fields', 'condition', 'execute'])
@@ -86,11 +86,11 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
    * Builds a Connection mock wired with the given select and update mocks.
    */
   private function buildConnection(?Select $selectMock = NULL, ?Update $updateMock = NULL): Connection {
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['select', 'update'])
-      ->getMock();
+      ->getMockForAbstractClass();
 
     if ($selectMock !== NULL) {
       $db->method('select')->willReturn($selectMock);
@@ -111,11 +111,11 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
    */
   public function testValidateReturnsFalseForEmptyToken(): void {
     // Empty token must return FALSE immediately without any DB call.
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['select'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->expects($this->never())->method('select');
 
     $service = new SubscriptionChoiceTokenService($db, $this->buildConfigFactory());
@@ -156,7 +156,8 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
   public function testValidateReturnsFalseWhenTokenAlreadyUsed(): void {
     $row = [
       'uid'           => '42',
-      'token_used'    => '1',   // burned
+    // Burned.
+      'token_used'    => '1',
       'token_expires' => (string) (time() + 86400),
     ];
     $db = $this->buildConnection($this->buildSelectMock($row));
@@ -171,7 +172,8 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
     $row = [
       'uid'           => '42',
       'token_used'    => '0',
-      'token_expires' => (string) (time() - 1), // 1 second in the past
+    // 1 second in the past
+      'token_expires' => (string) (time() - 1),
     ];
     $db = $this->buildConnection($this->buildSelectMock($row));
     $service = new SubscriptionChoiceTokenService($db, $this->buildConfigFactory());
@@ -185,7 +187,8 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
     $row = [
       'uid'           => '42',
       'token_used'    => '0',
-      'token_expires' => (string) (time() + 86400 * 14), // 14 days from now
+    // 14 days from now
+      'token_expires' => (string) (time() + 86400 * 14),
     ];
     $db = $this->buildConnection($this->buildSelectMock($row));
     $service = new SubscriptionChoiceTokenService($db, $this->buildConfigFactory());
@@ -200,11 +203,11 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
    * @covers ::burn
    */
   public function testBurnDoesNothingForEmptyToken(): void {
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->expects($this->never())->method('update');
 
     $service = new SubscriptionChoiceTokenService($db, $this->buildConfigFactory());
@@ -218,11 +221,11 @@ class SubscriptionChoiceTokenServiceTest extends UnitTestCase {
   public function testBurnCallsUpdateOnMigrationIntentsTable(): void {
     $update = $this->buildUpdateMock();
 
-    /** @var Connection&\PHPUnit\Framework\MockObject\MockObject $db */
+    /** @var \Drupal\Core\Database\Connection&\PHPUnit\Framework\MockObject\MockObject $db */
     $db = $this->getMockBuilder(Connection::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['update'])
-      ->getMock();
+      ->getMockForAbstractClass();
     $db->expects($this->once())
       ->method('update')
       ->with('license_service_migration_intents')

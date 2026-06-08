@@ -263,7 +263,8 @@ class SubscriptionNotificationService {
         return (string) $plan->label();
       }
     }
-    catch (\Exception) {}
+    catch (\Exception) {
+    }
     return ucfirst($planId);
   }
 

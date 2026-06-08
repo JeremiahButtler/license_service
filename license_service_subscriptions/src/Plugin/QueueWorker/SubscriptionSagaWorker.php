@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Processes subscription saga operation queue items.
  *
- * Queue name: license_service_subscriptions_saga
+ * Queue name: license_service_subscriptions_saga.
  *
  * Each item is an array with at minimum:
  *   - 'operation'              (string) — 'grant' | 'revoke' | 'suspend' |
@@ -82,10 +82,10 @@ class SubscriptionSagaWorker extends QueueWorkerBase implements ContainerFactory
    *   Re-throws on unrecoverable failure so Drupal cron re-queues the item.
    */
   public function processItem($data): void {
-    $operation            = (string) ($data['operation'] ?? '');
-    $uid                  = (int) ($data['uid'] ?? 0);
-    $commerceSubId        = (int) ($data['commerce_subscription_id'] ?? 0);
-    $eventKey             = (string) ($data['event_key'] ?? '');
+    $operation     = (string) ($data['operation'] ?? '');
+    $uid           = (int) ($data['uid'] ?? 0);
+    $commerceSubId = (int) ($data['commerce_subscription_id'] ?? 0);
+    $eventKey      = (string) ($data['event_key'] ?? '');
 
     switch ($operation) {
 

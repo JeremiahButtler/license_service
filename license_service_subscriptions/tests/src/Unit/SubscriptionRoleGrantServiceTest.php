@@ -17,7 +17,7 @@ use Drupal\Tests\UnitTestCase;
 /**
  * Unit tests for SubscriptionRoleGrantService::getRolesForTier().
  *
- * getRolesForTier() is pure config-reading logic with no DB access and no
+ * GetRolesForTier() is pure config-reading logic with no DB access and no
  * Drupal statics, so these tests run with simple mock objects and no container.
  *
  * @coversDefaultClass \Drupal\license_service_subscriptions\Service\SubscriptionRoleGrantService
@@ -55,7 +55,7 @@ class SubscriptionRoleGrantServiceTest extends UnitTestCase {
       $this->createMock(SeatCapService::class),
       $this->createMock(LoggerChannelFactoryInterface::class),
       $configFactory,
-      $this->createMock(Connection::class),
+      $this->getMockBuilder(Connection::class)->disableOriginalConstructor()->getMockForAbstractClass(),
     );
   }
 
@@ -113,7 +113,7 @@ class SubscriptionRoleGrantServiceTest extends UnitTestCase {
   /**
    * @covers ::getRolesForTier
    */
-  public function testTierMatchIsExact_doesNotMatchSubstring(): void {
+  public function testTierMatchIsExactDoesNotMatchSubstring(): void {
     // 'standard_plus' must NOT match when querying for 'standard'.
     $roleLevels = [
       'subscriber'      => 'standard',
@@ -142,7 +142,7 @@ class SubscriptionRoleGrantServiceTest extends UnitTestCase {
       $this->createMock(SeatCapService::class),
       $this->createMock(LoggerChannelFactoryInterface::class),
       $configFactory,
-      $this->createMock(Connection::class),
+      $this->getMockBuilder(Connection::class)->disableOriginalConstructor()->getMockForAbstractClass(),
     );
 
     $this->assertSame([], $service->getRolesForTier('standard'));

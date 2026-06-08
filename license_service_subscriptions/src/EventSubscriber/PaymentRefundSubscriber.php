@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\license_service_subscriptions\EventSubscriber;
 
-use Drupal\commerce_payment\Event\PaymentEvent;
 use Drupal\license_service_subscriptions\Service\TierMigrationService;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -178,7 +177,8 @@ class PaymentRefundSubscriber implements EventSubscriberInterface {
           ->load($orderId) ?: NULL;
       }
     }
-    catch (\Exception) {}
+    catch (\Exception) {
+    }
     return NULL;
   }
 
@@ -210,7 +210,8 @@ class PaymentRefundSubscriber implements EventSubscriberInterface {
         }
       }
     }
-    catch (\Exception) {}
+    catch (\Exception) {
+    }
     return NULL;
   }
 
