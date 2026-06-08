@@ -11,6 +11,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\license_service\Entitlements\EntitlementResolver;
 use Drupal\license_service\LicenseManagerService;
 use Drupal\node\NodeInterface;
@@ -31,6 +32,8 @@ use Drupal\node\NodeInterface;
  * Author: Jeremiah Buttler
  */
 class ContentAccessChecker {
+
+  use StringTranslationTrait;
 
   public function __construct(
     protected readonly LicenseManagerService $licenseManager,
@@ -54,14 +57,14 @@ class ContentAccessChecker {
   public function checkNodeAccess(NodeInterface $node, string $op, AccountInterface $account): AccessResultInterface {
     $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
-      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+      return $this->forbiddenWithCacheability($this->t('Your account does not have access to site content.'));
     }
     $contentType = $node->bundle();
 
     switch ($op) {
       case 'view':
         if (!$this->entitlementResolver->canView($level, $contentType)) {
-          return $this->forbiddenWithCacheability('Your license level does not permit viewing this content.');
+          return $this->forbiddenWithCacheability($this->t('Your license level does not permit viewing this content.'));
         }
         // Metered view limit check (recording happens in hook_node_view, not here).
         $result = $this->checkMeteredView($account, $contentType, $level);
@@ -79,7 +82,7 @@ class ContentAccessChecker {
 
       case 'update':
         if (!$this->entitlementResolver->canEdit($level, $contentType)) {
-          return $this->forbiddenWithCacheability('Your license level does not permit editing this content type.');
+          return $this->forbiddenWithCacheability($this->t('Your license level does not permit editing this content type.'));
         }
         // Edit quota check (per-period cap).
         $result = $this->checkEditQuota($account, $contentType, $level);
@@ -95,7 +98,7 @@ class ContentAccessChecker {
 
       case 'delete':
         if (!$this->entitlementResolver->canDelete($level, $contentType)) {
-          return $this->forbiddenWithCacheability('Your license level does not permit deleting this content type.');
+          return $this->forbiddenWithCacheability($this->t('Your license level does not permit deleting this content type.'));
         }
         break;
     }
@@ -111,11 +114,11 @@ class ContentAccessChecker {
   public function checkCreateAccess(AccountInterface $account, array $context, string $entityBundle): AccessResultInterface {
     $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
-      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+      return $this->forbiddenWithCacheability($this->t('Your account does not have access to site content.'));
     }
 
     if (!$this->entitlementResolver->canCreate($level, $entityBundle)) {
-      return $this->forbiddenWithCacheability('Your license level does not permit creating this content type.');
+      return $this->forbiddenWithCacheability($this->t('Your license level does not permit creating this content type.'));
     }
 
     // Create quota.
@@ -124,7 +127,7 @@ class ContentAccessChecker {
       $used = $this->getQuotaUsage($account->id(), $entityBundle, 'create');
       if ($used >= $quota) {
         return $this->forbiddenWithCacheability(
-          "Your license level limits you to {$quota} created items of this type. You have reached the limit."
+          $this->t('Your license level limits you to @quota created items of this type. You have reached the limit.', ['@quota' => $quota])
         )->addCacheContexts(['user']);
       }
       // Under quota, but the decision depends on this user's own quota usage;
@@ -144,7 +147,7 @@ class ContentAccessChecker {
   public function checkEntityAccess(EntityInterface $entity, string $op, AccountInterface $account): AccessResultInterface {
     $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
-      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+      return $this->forbiddenWithCacheability($this->t('Your account does not have access to site content.'));
     }
     $contentType = $entity->bundle();
 
@@ -176,7 +179,7 @@ class ContentAccessChecker {
 
     $level = $this->licenseManager->getLevelForAccount($account);
     if ($level === 'no_access') {
-      return $this->forbiddenWithCacheability('Your account does not have access to site content.');
+      return $this->forbiddenWithCacheability($this->t('Your account does not have access to site content.'));
     }
     $fieldName = $fieldDefinition->getName();
 
@@ -340,7 +343,7 @@ class ContentAccessChecker {
 
     if ($count >= $limit) {
       return $this->forbiddenWithCacheability(
-        "You have reached your {$period} view limit of {$limit} for this content type."
+        $this->t('You have reached your @period view limit of @limit for this content type.', ['@period' => $period, '@limit' => $limit])
       )->addCacheContexts(['user']);
     }
 
@@ -363,7 +366,7 @@ class ContentAccessChecker {
     $used = $this->getQuotaUsage($uid, $contentType, 'edit');
     if ($used >= $quota) {
       return $this->forbiddenWithCacheability(
-        "Your license level limits you to {$quota} edits of this content type. You have reached the limit."
+        $this->t('Your license level limits you to @quota edits of this content type. You have reached the limit.', ['@quota' => $quota])
       )->addCacheContexts(['user']);
     }
 
@@ -461,7 +464,10 @@ class ContentAccessChecker {
   /**
    * Returns a forbidden AccessResult with the standard license gate cacheability.
    */
-  protected function forbiddenWithCacheability(string $reason = ''): AccessResultInterface {
+  protected function forbiddenWithCacheability($reason = ''): AccessResultInterface {
+    // Accepts a string OR a TranslatableMarkup / MarkupInterface so callers
+    // can pass $this->t('…@var…', […]) instead of interpolating into a raw
+    // string (which would break Drupal's translation pipeline).
     return AccessResult::forbidden($reason)
       ->addCacheTags(['license_service'])
       ->addCacheContexts(['user.roles']);
