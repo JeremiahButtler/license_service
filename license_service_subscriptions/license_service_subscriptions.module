@@ -1,0 +1,132 @@
+<?php
+
+/**
+ * @file
+ * Module hooks for License Service: Subscriptions.
+ *
+ * Author: Jeremiah Buttler.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function license_service_subscriptions_help(string $route_name, RouteMatchInterface $route_match): string {
+  if ($route_name === 'help.page.license_service_subscriptions') {
+    return '<p>' . t(
+      'Bridges Drupal Commerce / Commerce Recurring into the License Service
+      tier-gating system. Manages subscription state, role grants, plan
+      deprecation, and the choose-plan token flow. See the
+      <a href=":plans">Subscription Plans</a> admin page to configure plans.',
+      [':plans' => '/admin/config/license-service/subscriptions/plans']
+    ) . '</p>';
+  }
+  return '';
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Three periodic tasks:
+ *   1. Pre-renewal reminder: email subscribers X days before renewal.
+ *   2. Dunning grace-window enforcer: revoke roles when payment_failed_since
+ *      exceeds the configured dunning ceiling (renewal_reminder_days).
+ *   3. Max-pause enforcer: revoke roles for subscriptions paused past
+ *      max_pause_days.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_subscriptions_cron(): void {
+  // Config-sync guard: skip during config import.
+  if (\Drupal::isConfigSyncing()) {
+    return;
+  }
+
+  $config = \Drupal::config('license_service_subscriptions.settings');
+  $database = \Drupal::database();
+  $migrationService = \Drupal::service('license_service_subscriptions.migration');
+  $logger = \Drupal::logger('license_service_subscriptions');
+  $now = \Drupal::time()->getRequestTime();
+
+  // ── 1. Dunning grace-window enforcer ──────────────────────────────────────
+  // Revoke roles for subscriptions in payment_method_failing state where
+  // payment_failed_since is older than renewal_reminder_days.
+  $renewalReminderDays = (int) ($config->get('renewal_reminder_days') ?? 7);
+  $dunningCutoff = $now - ($renewalReminderDays * 86400);
+
+  $failingRows = $database->select('license_service_subscriptions_state', 's')
+    ->fields('s', ['uid', 'commerce_subscription_id', 'plan_id'])
+    ->condition('state', 'payment_method_failing')
+    ->condition('payment_failed_since', $dunningCutoff, '<=')
+    ->isNotNull('payment_failed_since')
+    ->execute()
+    ->fetchAll();
+
+  foreach ($failingRows as $row) {
+    $commerceSubId = (int) $row->commerce_subscription_id;
+    $eventKey = 'cron:dunning:' . $commerceSubId . ':' . floor($now / 86400);
+    try {
+      $migrationService->revokeSubscription(
+        $commerceSubId,
+        'renewal_payment_failed',
+        $now,
+        $eventKey,
+      );
+      $logger->notice(
+        'Cron: revoked sub @sub (uid @uid) after dunning grace window expired.',
+        ['@sub' => $commerceSubId, '@uid' => $row->uid],
+      );
+    }
+    catch (\Exception $e) {
+      $logger->error(
+        'Cron: failed to revoke dunning sub @sub: @msg',
+        ['@sub' => $commerceSubId, '@msg' => $e->getMessage()],
+      );
+    }
+  }
+
+  // ── 2. Max-pause enforcer ─────────────────────────────────────────────────
+  // Revoke roles for subscriptions paused past max_pause_days.
+  $maxPauseDays = (int) ($config->get('max_pause_days') ?? 90);
+  $pauseCutoff = $now - ($maxPauseDays * 86400);
+
+  $pausedRows = $database->select('license_service_subscriptions_state', 's')
+    ->fields('s', ['uid', 'commerce_subscription_id'])
+    ->condition('state', 'paused')
+    ->condition('updated', $pauseCutoff, '<=')
+    ->execute()
+    ->fetchAll();
+
+  foreach ($pausedRows as $row) {
+    $commerceSubId = (int) $row->commerce_subscription_id;
+    $eventKey = 'cron:maxpause:' . $commerceSubId . ':' . floor($now / 86400);
+    try {
+      // Transition paused → active first so revokeSubscription can diff properly.
+      $migrationService->resumeSubscription($commerceSubId);
+      $migrationService->revokeSubscription(
+        $commerceSubId,
+        'access_revoked_pause_exceeded',
+        $now,
+        $eventKey,
+      );
+      $logger->notice(
+        'Cron: revoked sub @sub (uid @uid) after max pause window exceeded.',
+        ['@sub' => $commerceSubId, '@uid' => $row->uid],
+      );
+    }
+    catch (\Exception $e) {
+      $logger->error(
+        'Cron: failed to revoke over-paused sub @sub: @msg',
+        ['@sub' => $commerceSubId, '@msg' => $e->getMessage()],
+      );
+    }
+  }
+
+  // ── 3. Pre-renewal reminder (stub — Phase 4 implements email dispatch) ─────
+  // @todo Phase 4: query subscriptions expiring within renewal_reminder_days
+  //   that have not received a reminder (last_reminder_sent_at IS NULL or old),
+  //   then enqueue reminder emails via the notification service.
+}

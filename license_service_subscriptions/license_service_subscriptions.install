@@ -95,6 +95,17 @@ function license_service_subscriptions_schema(): array {
         'default' => 0,
         'description' => 'Unix timestamp of last update.',
       ],
+      'payment_failed_since' => [
+        'type' => 'int',
+        'not null' => FALSE,
+        'description' => 'Unix timestamp of the first payment failure. Used for dunning grace-window calculation. NULL when payment is current.',
+      ],
+      'roles_json' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'description' => 'JSON-encoded array of Drupal role IDs actually granted by this subscription. Used for deterministic revocation without re-resolving tier config.',
+      ],
     ],
     'primary key' => ['id'],
     'unique keys' => [
@@ -103,6 +114,7 @@ function license_service_subscriptions_schema(): array {
     'indexes' => [
       'uid_state' => ['uid', 'state'],
       'plan_id' => ['plan_id'],
+      'payment_failed' => ['payment_failed_since'],
     ],
   ];
 

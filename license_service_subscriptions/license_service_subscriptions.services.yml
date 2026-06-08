@@ -7,6 +7,8 @@ services:
       - '@license_service.license_manager'
       - '@license_service.seat_cap'
       - '@logger.factory'
+      - '@config.factory'
+      - '@database'
 
   license_service_subscriptions.migration:
     class: Drupal\license_service_subscriptions\Service\TierMigrationService
@@ -22,3 +24,17 @@ services:
     arguments:
       - '@database'
       - '@config.factory'
+
+  license_service_subscriptions.subscription_lifecycle_subscriber:
+    class: Drupal\license_service_subscriptions\EventSubscriber\SubscriptionLifecycleSubscriber
+    arguments:
+      - '@license_service_subscriptions.migration'
+    tags:
+      - { name: event_subscriber }
+
+  license_service_subscriptions.payment_refund_subscriber:
+    class: Drupal\license_service_subscriptions\EventSubscriber\PaymentRefundSubscriber
+    arguments:
+      - '@license_service_subscriptions.migration'
+    tags:
+      - { name: event_subscriber }
