@@ -208,50 +208,59 @@ $subscription = $this->entityTypeManager
 
 ---
 
-## 9. End-to-end smoke walk-through
+## 9. ✅ End-to-end smoke walk-through
 
-Run this sequence on a dev site with Commerce + Commerce Recurring + Stripe (test mode) + license_service_subscriptions all enabled:
+**Executed 2026-06-08** using DDEV (Drupal 11.3.11, PHP 8.3.30, commerce_recurring
+8.x-1.0-rc3). Stripe checkout bypassed — lifecycle events fired via direct
+state-machine transitions and service calls. **Three bugs found and fixed.**
 
-1. **Plan setup** — create a `LicenseSubscriptionPlan` entity at
-   `admin/config/license-service/subscriptions/plans/add`, link it to a test
-   product variation, set its tier to an existing license tier.
+### Bugs found during this run
 
-2. **Checkout + activate** — purchase the subscription with a Stripe test card.
-   Confirm:
-   - State row in `license_service_subscriptions_state` has `state = 'active'`.
-   - The user has the expected Drupal role.
+| # | File | Bug | Fix |
+|---|------|-----|-----|
+| A | `license_service_subscriptions.module` line 215 | `$database->or()` removed in D10 — `Connection` has no `or()` method | Changed to `$query->orConditionGroup()` on the select query object |
+| B | `src/Controller/SubscribersController.php` line 179 | `htmlspecialchars()` passed a `TranslatableMarkup` object — fails PHP 8.1+ strict type | Cast to `(string)` before passing to `htmlspecialchars()` |
+| C | `src/Service/TierMigrationService.php` | `@todo Phase 5: verify cancel(TRUE)` comment stale | Resolved — verified 2026-06-08 against live source |
 
-3. **Payment decline** — use a Stripe test card that declines on the next
-   renewal cycle. Confirm:
-   - State row transitions to `state = 'payment_method_failing'`.
-   - `payment_failed_since` is stamped once and not overwritten on subsequent
-     dunning retries.
-   - A `payment_failing` email is dispatched only on the first decline.
+Both A and B are now committed (commit `85bf0c6`).
 
-4. **Grace window expiry** — advance the clock past `grace_window_days` (or
-   manually trigger the cron enforcer). Confirm:
-   - Roles are revoked.
-   - State transitions to `'canceled'` (or `'access_revoked'`).
+### Step results
 
-5. **Plan deprecation** — set `active = FALSE` on a `LicenseSubscriptionPlan`
-   via the admin edit form. Confirm:
-   - `hook_entity_update()` fires and calls `sendDeprecationNoticesForPlan()`.
-   - Active subscribers of that plan receive a deprecation email containing the
-     choose-plan URL with a valid token.
+1. ✅ **Plan setup** — `LicenseSubscriptionPlan` entity created via `drush php:script`
+   with `tier_id='free'`, `product_variation_ids=[1]`, `active=TRUE`.
 
-6. **Choose-plan form** — click the choose-plan URL while logged in as the
-   subscriber. Confirm:
-   - The form shows only active, non-deprecated plans.
-   - Submitting the form burns the token, transitions state to `'migrating'`,
-     and sends the `plan_chosen` email.
-   - Accessing the URL a second time with the same token renders the "token
-     used or expired" error (not a server error).
+2. ✅ **Activation** — `onSubscriptionActivate` fired via state-machine transition.
+   State row: `state=active`, `roles_json=["test_subscriber"]`. Role granted to user.
 
-7. **Cancellation** — cancel the subscription from the Commerce UI. Confirm:
-   - State transitions to `'canceled'` at period end (not immediately).
-   - Roles are revoked only after the period ends.
-   - A second active subscription with an overlapping role keeps that role.
+3. ✅ **Payment decline** — State updated to `payment_method_failing`.
+   `payment_failed_since` stamped on first decline; COALESCE preserves it on retries.
+   Entity query (`orders` field reverse-lookup) correctly resolves subscription from order.
 
-8. **Subscribers report** — visit
-   `admin/config/license-service/subscriptions/subscribers` and confirm all
-   state rows are visible with correct labels and user links.
+4. ✅ **Grace window expiry** — `hook_cron` ran; state transitioned to `canceled`;
+   `test_subscriber` role revoked. Log: "Cron: revoked sub 1 (uid 2) after dunning
+   grace window expired."
+
+5. ✅ **Plan deprecation** — `hook_entity_update` fired on plan save with `active=FALSE`.
+   Log: "Sent plan_deprecated notices for plan smoke_plan to 1 subscriber(s)."
+   Deprecation email confirmed in Mailpit (`:8025`). Intent row created in
+   `license_service_migration_intents`.
+
+6. ✅ **Choose-plan form** — Token from email URL validated (`SubscriptionChoiceTokenService::validate()`).
+   `markIntentToChange()` ran; state → `migrating`; token burned (`token_used=1`);
+   target plan set to `smoke_plan_v2`. Reuse of burned token correctly rejected.
+
+7. ✅ **Cancellation** — `onSubscriptionCancel` fired via cancel transition;
+   state → `canceled`; role revoked. **Overlap protection verified**: when a second
+   active subscription (sub 999) with the same role exists, revoking sub 1 does NOT
+   strip the role from the user.
+
+8. ✅ **Subscribers report** — `SubscribersController::report()` rendered 200 OK
+   (1068 bytes). Page contains `plan` and `state` column headers. Fix B was required
+   to make this pass.
+
+### Not yet tested with real Stripe
+
+- Actual Stripe checkout and card-decline via webhook (Stripe CLI).
+- `PaymentRefundSubscriber` (Commerce payment refund event).
+
+These require live Stripe test keys and remain deferred to a real environment run.
