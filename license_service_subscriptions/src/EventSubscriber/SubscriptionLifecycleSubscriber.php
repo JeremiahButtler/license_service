@@ -6,6 +6,7 @@ namespace Drupal\license_service_subscriptions\EventSubscriber;
 
 use Drupal\commerce_recurring\Event\PaymentDeclinedEvent;
 use Drupal\commerce_recurring\Event\RecurringEvents;
+use Drupal\license_service_subscriptions\Service\SubscriptionNotificationService;
 use Drupal\license_service_subscriptions\Service\TierMigrationService;
 use Drupal\state_machine\Event\WorkflowTransitionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -40,9 +41,12 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
    *
    * @param \Drupal\license_service_subscriptions\Service\TierMigrationService $migrationService
    *   The tier migration service (state machine + saga enqueueing).
+   * @param \Drupal\license_service_subscriptions\Service\SubscriptionNotificationService $notificationService
+   *   The notification service (sends payment_failing email on declined payment).
    */
   public function __construct(
     protected readonly TierMigrationService $migrationService,
+    protected readonly SubscriptionNotificationService $notificationService,
   ) {}
 
   /**
@@ -201,6 +205,38 @@ class SubscriptionLifecycleSubscriber implements EventSubscriberInterface {
         ':id'      => $commerceSubscriptionId,
       ],
     );
+
+    // Send payment-failing notification (only on the FIRST failure so the
+    // subscriber doesn't receive a new email on every dunning retry).
+    // Re-read the row to get the stored payment_failed_since value.
+    $failedSince = (int) ($database->select('license_service_subscriptions_state', 's')
+      ->fields('s', ['payment_failed_since', 'uid', 'plan_id'])
+      ->condition('commerce_subscription_id', $commerceSubscriptionId)
+      ->execute()
+      ->fetchField() ?? $now);
+
+    $stateRow = $database->select('license_service_subscriptions_state', 's')
+      ->fields('s', ['uid', 'plan_id', 'payment_failed_since'])
+      ->condition('commerce_subscription_id', $commerceSubscriptionId)
+      ->execute()
+      ->fetchAssoc();
+
+    if ($stateRow && (int) $stateRow['payment_failed_since'] === $now) {
+      // payment_failed_since was just set to NOW — this is the first failure.
+      try {
+        $this->notificationService->sendPaymentFailing(
+          (int) $stateRow['uid'],
+          (string) $stateRow['plan_id'],
+          $now,
+        );
+      }
+      catch (\Exception $e) {
+        \Drupal::logger('license_service_subscriptions')->warning(
+          'onPaymentDeclined: payment_failing email failed for sub @sub: @msg',
+          ['@sub' => $commerceSubscriptionId, '@msg' => $e->getMessage()],
+        );
+      }
+    }
   }
 
   // --------------------------------------------------------------------------

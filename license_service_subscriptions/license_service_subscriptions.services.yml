@@ -20,6 +20,7 @@ services:
       - '@logger.factory'
       - '@entity_type.manager'
       - '@config.factory'
+      - '@license_service_subscriptions.notification'
 
   license_service_subscriptions.token:
     class: Drupal\license_service_subscriptions\Service\SubscriptionChoiceTokenService
@@ -27,10 +28,22 @@ services:
       - '@database'
       - '@config.factory'
 
+  license_service_subscriptions.notification:
+    class: Drupal\license_service_subscriptions\Service\SubscriptionNotificationService
+    arguments:
+      - '@plugin.manager.mail'
+      - '@language_manager'
+      - '@entity_type.manager'
+      - '@database'
+      - '@config.factory'
+      - '@logger.factory'
+      - '@license_service_subscriptions.token'
+
   license_service_subscriptions.subscription_lifecycle_subscriber:
     class: Drupal\license_service_subscriptions\EventSubscriber\SubscriptionLifecycleSubscriber
     arguments:
       - '@license_service_subscriptions.migration'
+      - '@license_service_subscriptions.notification'
     tags:
       - { name: event_subscriber }
 

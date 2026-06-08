@@ -9,6 +9,7 @@
 
 declare(strict_types=1);
 
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
@@ -25,6 +26,158 @@ function license_service_subscriptions_help(string $route_name, RouteMatchInterf
     ) . '</p>';
   }
   return '';
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * Builds outgoing subscription notification emails by key.
+ *
+ * Keys:
+ *   - plan_deprecated  — plan being discontinued; contains choose-plan link.
+ *   - renewal_reminder — subscription renewing within renewal_reminder_days.
+ *   - plan_chosen      — user's plan choice has been recorded.
+ *   - payment_failing  — payment declining; action required.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_subscriptions_mail(string $key, array &$message, array $params): void {
+  /** @var \Drupal\user\UserInterface $user */
+  $user        = $params['user'] ?? NULL;
+  $userName    = $user ? $user->getDisplayName() : t('Subscriber');
+  $siteConfig  = \Drupal::config('system.site');
+  $siteName    = $siteConfig->get('name') ?? 'this site';
+  $dateService = \Drupal::service('date.formatter');
+
+  switch ($key) {
+
+    case 'plan_deprecated':
+      $planLabel   = (string) ($params['plan_label'] ?? $params['plan_id'] ?? 'your plan');
+      $choosePlanUrl = (string) ($params['choose_plan_url'] ?? '');
+      $effectiveAt = isset($params['effective_at']) ? $dateService->format((int) $params['effective_at'], 'medium') : t('soon');
+
+      $message['subject'] = t(
+        'Action required: Your @plan subscription on @site is being discontinued',
+        ['@plan' => $planLabel, '@site' => $siteName],
+      );
+      $message['body'][] = t('Hello @name,', ['@name' => $userName]);
+      $message['body'][] = t(
+        'Your @plan subscription on @site is being discontinued. Your access will continue until @date.',
+        ['@plan' => $planLabel, '@site' => $siteName, '@date' => $effectiveAt],
+      );
+      if ($choosePlanUrl) {
+        $message['body'][] = t(
+          'To keep your access, please choose a new plan before the deadline:',
+        );
+        $message['body'][] = $choosePlanUrl;
+      }
+      $message['body'][] = t(
+        'If you take no action, your account will automatically move to the default plan.',
+      );
+      break;
+
+    case 'renewal_reminder':
+      $planLabel = (string) ($params['plan_label'] ?? $params['plan_id'] ?? 'your plan');
+      $renewalAt = isset($params['renewal_at']) ? $dateService->format((int) $params['renewal_at'], 'medium') : t('soon');
+
+      $message['subject'] = t(
+        'Your @plan subscription on @site renews on @date',
+        ['@plan' => $planLabel, '@site' => $siteName, '@date' => $renewalAt],
+      );
+      $message['body'][] = t('Hello @name,', ['@name' => $userName]);
+      $message['body'][] = t(
+        'This is a reminder that your @plan subscription on @site will renew on @date.',
+        ['@plan' => $planLabel, '@site' => $siteName, '@date' => $renewalAt],
+      );
+      $message['body'][] = t(
+        'If you wish to make changes to your subscription, please log in and visit your account page.',
+      );
+      break;
+
+    case 'plan_chosen':
+      $fromLabel = (string) ($params['from_plan_label'] ?? $params['from_plan_id'] ?? 'your old plan');
+      $toLabel   = (string) ($params['to_plan_label'] ?? $params['to_plan_id'] ?? 'your new plan');
+      $paymentDeadline = $params['payment_deadline'] ?? NULL;
+
+      $message['subject'] = t(
+        'Plan change confirmed on @site: switching to @plan',
+        ['@plan' => $toLabel, '@site' => $siteName],
+      );
+      $message['body'][] = t('Hello @name,', ['@name' => $userName]);
+      $message['body'][] = t(
+        'Your choice has been recorded. Your @old subscription will switch to @new at the end of your current billing period.',
+        ['@old' => $fromLabel, '@new' => $toLabel],
+      );
+      if ($paymentDeadline) {
+        $deadlineFormatted = $dateService->format((int) $paymentDeadline, 'medium');
+        $message['body'][] = t(
+          'Because @new is a paid plan, you need to complete checkout by @deadline. If checkout is not completed by then, the default free plan will apply.',
+          ['@new' => $toLabel, '@deadline' => $deadlineFormatted],
+        );
+      }
+      break;
+
+    case 'payment_failing':
+      $planLabel     = (string) ($params['plan_label'] ?? $params['plan_id'] ?? 'your plan');
+      $graceDeadline = isset($params['grace_deadline']) ? $dateService->format((int) $params['grace_deadline'], 'medium') : t('soon');
+
+      $message['subject'] = t(
+        'Action required: Payment failing for your @plan subscription on @site',
+        ['@plan' => $planLabel, '@site' => $siteName],
+      );
+      $message['body'][] = t('Hello @name,', ['@name' => $userName]);
+      $message['body'][] = t(
+        'We were unable to process the payment for your @plan subscription on @site.',
+        ['@plan' => $planLabel, '@site' => $siteName],
+      );
+      $message['body'][] = t(
+        'Please update your payment method before @deadline to avoid losing access.',
+        ['@deadline' => $graceDeadline],
+      );
+      break;
+  }
+}
+
+/**
+ * Implements hook_entity_update().
+ *
+ * When a LicenseSubscriptionPlan's active flag transitions TRUE → FALSE, sends
+ * deprecation notices to all active/paused subscribers on that plan, each with
+ * their own single-use choose-plan token.
+ *
+ * Author: Jeremiah Buttler.
+ */
+function license_service_subscriptions_entity_update(EntityInterface $entity): void {
+  if ($entity->getEntityTypeId() !== 'license_subscription_plan') {
+    return;
+  }
+  if (\Drupal::isConfigSyncing()) {
+    return;
+  }
+
+  // Detect active → inactive transition.
+  // $entity->original is the pre-save version set by the entity storage layer.
+  $original = $entity->original ?? NULL;
+  if ($original === NULL) {
+    return;
+  }
+
+  $wasActive = (bool) $original->get('active');
+  $isActive  = (bool) $entity->get('active');
+
+  if ($wasActive && !$isActive) {
+    // Plan just deprecated: send notices to all active/paused subscribers.
+    try {
+      \Drupal::service('license_service_subscriptions.notification')
+        ->sendDeprecationNoticesForPlan($entity->id());
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('license_service_subscriptions')->error(
+        'hook_entity_update: failed to send deprecation notices for plan @plan: @msg',
+        ['@plan' => $entity->id(), '@msg' => $e->getMessage()],
+      );
+    }
+  }
 }
 
 /**
@@ -45,16 +198,80 @@ function license_service_subscriptions_cron(): void {
     return;
   }
 
-  $config = \Drupal::config('license_service_subscriptions.settings');
-  $database = \Drupal::database();
-  $migrationService = \Drupal::service('license_service_subscriptions.migration');
-  $logger = \Drupal::logger('license_service_subscriptions');
-  $now = \Drupal::time()->getRequestTime();
+  $config              = \Drupal::config('license_service_subscriptions.settings');
+  $database            = \Drupal::database();
+  $migrationService    = \Drupal::service('license_service_subscriptions.migration');
+  $notificationService = \Drupal::service('license_service_subscriptions.notification');
+  $logger              = \Drupal::logger('license_service_subscriptions');
+  $now                 = \Drupal::time()->getRequestTime();
 
-  // ── 1. Dunning grace-window enforcer ──────────────────────────────────────
+  // ── 1. Pre-renewal reminder ────────────────────────────────────────────────
+  // Email subscribers whose subscription renews within renewal_reminder_days,
+  // but who have not received a reminder in the past 24 hours.
+  $renewalReminderDays = (int) ($config->get('renewal_reminder_days') ?? 7);
+  $reminderCutoff      = $now - 86400; // No more than one reminder per 24h.
+
+  $reminderCondition = $database->or()
+    ->isNull('last_reminder_sent_at')
+    ->condition('last_reminder_sent_at', $reminderCutoff, '<');
+
+  $activeRows = $database->select('license_service_subscriptions_state', 's')
+    ->fields('s', ['uid', 'commerce_subscription_id', 'plan_id'])
+    ->condition('state', 'active')
+    ->condition($reminderCondition)
+    ->execute()
+    ->fetchAll();
+
+  foreach ($activeRows as $row) {
+    $commerceSubId = (int) $row->commerce_subscription_id;
+
+    // Load the Commerce subscription to get the next renewal time.
+    // @todo Phase 5: verify getNextRenewalTime() against installed commerce_recurring.
+    try {
+      $commerceSub = \Drupal::entityTypeManager()
+        ->getStorage('commerce_subscription')
+        ->load($commerceSubId);
+
+      if ($commerceSub === NULL) {
+        continue;
+      }
+      if (!method_exists($commerceSub, 'getNextRenewalTime')) {
+        continue;
+      }
+
+      $nextRenewal = (int) $commerceSub->getNextRenewalTime();
+      if ($nextRenewal === 0) {
+        continue;
+      }
+
+      // Only send if renewal is within the reminder window.
+      if ($nextRenewal > $now + ($renewalReminderDays * 86400)) {
+        continue;
+      }
+
+      $notificationService->sendRenewalReminder(
+        (int) $row->uid,
+        (string) $row->plan_id,
+        $nextRenewal,
+      );
+
+      // Stamp last_reminder_sent_at so we don't re-send on every cron run.
+      $database->update('license_service_subscriptions_state')
+        ->fields(['last_reminder_sent_at' => $now])
+        ->condition('commerce_subscription_id', $commerceSubId)
+        ->execute();
+    }
+    catch (\Exception $e) {
+      $logger->warning(
+        'Cron: renewal reminder failed for sub @sub: @msg',
+        ['@sub' => $commerceSubId, '@msg' => $e->getMessage()],
+      );
+    }
+  }
+
+  // ── 2. Dunning grace-window enforcer ──────────────────────────────────────
   // Revoke roles for subscriptions in payment_method_failing state where
   // payment_failed_since is older than renewal_reminder_days.
-  $renewalReminderDays = (int) ($config->get('renewal_reminder_days') ?? 7);
   $dunningCutoff = $now - ($renewalReminderDays * 86400);
 
   $failingRows = $database->select('license_service_subscriptions_state', 's')
@@ -88,10 +305,10 @@ function license_service_subscriptions_cron(): void {
     }
   }
 
-  // ── 2. Max-pause enforcer ─────────────────────────────────────────────────
+  // ── 3. Max-pause enforcer ─────────────────────────────────────────────────
   // Revoke roles for subscriptions paused past max_pause_days.
   $maxPauseDays = (int) ($config->get('max_pause_days') ?? 90);
-  $pauseCutoff = $now - ($maxPauseDays * 86400);
+  $pauseCutoff  = $now - ($maxPauseDays * 86400);
 
   $pausedRows = $database->select('license_service_subscriptions_state', 's')
     ->fields('s', ['uid', 'commerce_subscription_id'])
@@ -124,9 +341,4 @@ function license_service_subscriptions_cron(): void {
       );
     }
   }
-
-  // ── 3. Pre-renewal reminder (stub — Phase 4 implements email dispatch) ─────
-  // @todo Phase 4: query subscriptions expiring within renewal_reminder_days
-  //   that have not received a reminder (last_reminder_sent_at IS NULL or old),
-  //   then enqueue reminder emails via the notification service.
 }

@@ -9,6 +9,7 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Queue\QueueFactory;
+use Drupal\license_service_subscriptions\Service\SubscriptionNotificationService;
 
 /**
  * Implements the 5-operation plan-deprecation state machine.
@@ -45,6 +46,8 @@ class TierMigrationService {
    *   The entity type manager (for loading Commerce subscriptions + plan entities).
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory (reads payment_completion_grace_days, default_fallback_tier).
+   * @param \Drupal\license_service_subscriptions\Service\SubscriptionNotificationService $notificationService
+   *   The notification service (sends plan_chosen email after commit).
    */
   public function __construct(
     protected readonly Connection $database,
@@ -54,6 +57,7 @@ class TierMigrationService {
     protected readonly LoggerChannelFactoryInterface $loggerFactory,
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly ConfigFactoryInterface $configFactory,
+    protected readonly SubscriptionNotificationService $notificationService,
   ) {}
 
   /**
@@ -384,6 +388,23 @@ class TierMigrationService {
       $logger->warning(
         'markIntentToChange: could not schedule cancel on Commerce sub @id: @msg',
         ['@id' => $commerceSubscriptionId, '@msg' => $e->getMessage()],
+      );
+    }
+
+    // 6. Send plan-chosen confirmation email.
+    try {
+      $this->notificationService->sendPlanChosen(
+        $uid,
+        (string) $stateRow['plan_id'],
+        $resolvedPlanId,
+        $paymentDeadline,
+      );
+    }
+    catch (\Exception $e) {
+      // Non-fatal: intent is committed; log the notification failure.
+      $logger->warning(
+        'markIntentToChange: plan_chosen email failed for uid @uid: @msg',
+        ['@uid' => $uid, '@msg' => $e->getMessage()],
       );
     }
 
