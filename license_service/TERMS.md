@@ -261,7 +261,50 @@ additional terms apply to the AI token quota enforcement feature:
   AideaMaker may change which tiers include quota enforcement in future license
   updates.
 
-## 22. Contact
+## 22. Commerce Recurring Subscription Management
+
+If you enable the **License Service: Subscriptions** sub-module
+(`license_service_subscriptions`), the following additional terms apply:
+
+- **Automatic role management.** The sub-module monitors Commerce Recurring
+  subscription lifecycle events and automatically grants or revokes Drupal user
+  roles when a subscriber activates, cancels, expires, or fails to pay. You are
+  responsible for ensuring your plan configurations, tier mappings, and seat-cap
+  settings correctly reflect your intended access policy. AideaMaker is not
+  responsible for access outcomes resulting from misconfigured plans, tiers, or
+  role assignments.
+- **Dunning and grace windows.** When a payment is declined, the sub-module
+  records the first failure timestamp and enters a configurable grace window
+  before revoking roles. You are responsible for setting appropriate grace window
+  values (`grace_window_days`) for your subscriber base. AideaMaker is not liable
+  for access that continues during the grace period due to payment failures.
+- **Plan deprecation and choose-plan tokens.** The single-use choose-plan token
+  emailed to subscribers is bound to the subscriber's Drupal UID and is not a
+  login link. Token TTL is configurable. You are responsible for ensuring that
+  deprecation emails reach subscribers before the token expires. AideaMaker is
+  not liable for subscribers who lose access because they did not act on a
+  deprecation email before the token expired.
+- **Queue-based processing.** All state-mutating subscription operations are
+  processed via Drupal's queue system. Roles may not be granted or revoked
+  immediately — the delay depends on your site's cron frequency and queue-worker
+  configuration. AideaMaker is not responsible for access inconsistencies caused
+  by queue backlog, cron failure, or server outages.
+- **Commerce Recurring dependency.** This sub-module requires a compatible
+  version of `drupal/commerce_recurring` and related modules. AideaMaker does not
+  warrant compatibility with all versions of Commerce Recurring or the upstream
+  APIs it depends on. See `SMOKE_TEST_CHECKLIST.md` in the sub-module for
+  integration verification steps.
+- **No refunds for role-state transitions.** Role grants and revocations
+  performed by the sub-module do not create any entitlement to refunds. The
+  no-refunds policy in Section 7 applies in full to any subscription managed
+  through Commerce Recurring and this sub-module.
+- **Configuration is your responsibility.** The sub-module's settings
+  (grace windows, notification toggles, fallback tiers, pause limits) are
+  configurable by site administrators. AideaMaker is not responsible for business
+  impacts arising from settings that are too permissive, too restrictive, or
+  incorrectly configured for your use case.
+
+## 23. Contact
 
 Questions about these Terms may be directed to AideaMaker through
 [www.licenseverificationserver.com](https://www.licenseverificationserver.com).

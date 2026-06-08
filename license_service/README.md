@@ -129,6 +129,127 @@ The same list is searchable in your Drupal admin at
 
 ---
 
+## Subscription Management (license_service_subscriptions sub-module)
+
+*Enable the `license_service_subscriptions` sub-module to bridge Commerce
+Recurring subscriptions to the License Service role system.*
+
+### Requirements
+
+In addition to the core module requirements, this sub-module requires:
+
+- `drupal/commerce_recurring` — subscription lifecycle events
+- `drupal/commerce` — order and payment entities
+- `drupal/state_machine` — workflow transition events
+
+### Installation
+
+1. Enable the parent module (`license_service`) first.
+2. Enable the sub-module:
+   ```
+   drush en license_service_subscriptions
+   ```
+3. Run database updates:
+   ```
+   drush updb
+   ```
+4. Clear caches:
+   ```
+   drush cr
+   ```
+
+### Subscription Plans
+
+Define **LicenseSubscriptionPlan** entities at
+**Admin → Configuration → License Service → Plans**. Each plan links one or more
+Commerce product variations to a local license tier. When a subscriber purchases
+that variation, the module automatically grants the roles mapped to the plan's
+tier.
+
+### Settings
+
+Configure the subscription enforcement behavior at
+**Admin → Configuration → License Service → Plans → Settings**:
+
+| Setting | Default | Description |
+|---|---|---|
+| Default fallback tier | `free` | Tier applied when a plan is deprecated and the user picks no replacement |
+| Grace window (days) | 7 | Days after dunning ceiling before roles are revoked |
+| Force-migrate grace (days) | 3 | Days after plan deprecation deadline before admin auto-migrates |
+| Choice window (days) | 14 | How long a deprecation choose-plan link remains valid |
+| Payment completion grace (days) | 3 | Extra time for a subscriber to complete payment after choosing a new plan |
+| Renewal reminder (days) | 7 | How many days before renewal to send a reminder email |
+| Max pause (days) | 90 | Maximum time a subscription may remain paused before auto-revocation |
+| Notifications enabled | true | Global on/off switch for all subscription emails |
+
+### Lifecycle events and role management
+
+The sub-module wires into four Commerce Recurring / state-machine events:
+
+| Event | Action |
+|---|---|
+| `commerce_subscription.activate.post_transition` | Grants roles mapped to the subscription's plan tier |
+| `commerce_subscription.cancel.post_transition` | Revokes roles at period end; diffs other active subs before stripping any role |
+| `commerce_subscription.expire.post_transition` | Hard-revokes roles when a subscription's end date passes |
+| `commerce_recurring.payment_declined` | Marks `payment_method_failing`; stamps first-failure timestamp; sends dunning email on first decline only |
+
+All mutating calls are **enqueued** as idempotent saga items via the
+`license_service_subscriptions_saga` queue worker (30 s cron time). A queue-worker
+failure does not propagate to the calling request.
+
+Every state-mutating path checks `\Drupal::isConfigSyncing()` and skips during
+config import to prevent test fixture and site build operations from triggering
+real role changes.
+
+### Plan deprecation workflow
+
+When an administrator marks a `LicenseSubscriptionPlan` as inactive, the module:
+
+1. Sends a **deprecation email** to every active and paused subscriber, with a
+   single-use choose-plan URL (TTL = `choice_window_days`).
+2. Subscribers click the link and pick a replacement plan on the
+   **choose-plan form** (`/subscribe/choose/{token}`). The token is UID-bound and
+   is burned at form submission, not on the GET (email-scanner safe).
+3. On submission the sub-module records the intent (`migrating` state), schedules
+   a period-end cancellation on the old Commerce subscription, and sends a
+   **plan-chosen confirmation email**.
+
+### Subscribers report
+
+View all subscription state rows at
+**Admin → Configuration → License Service → Plans → Subscribers**. The report
+shows the current state badge (active / payment\_method\_failing / paused /
+migrating / canceled), plan name, user account, and last-updated timestamp.
+
+### Notifications
+
+Four email keys are dispatched via Drupal's `MailManagerInterface`:
+
+| Key | When sent |
+|---|---|
+| `plan_deprecated` | Administrator deactivates a plan; all affected subscribers |
+| `renewal_reminder` | Cron: within `renewal_reminder_days` of a subscription's next renewal |
+| `plan_chosen` | Subscriber submits the choose-plan form |
+| `payment_failing` | First payment decline only (not on dunning retries) |
+
+All emails are skipped when `notification_enabled = false` in the settings.
+
+### Features (license_service_subscriptions)
+
+- **Commerce Recurring integration** — Automatic role grant/revoke on subscription lifecycle transitions via state-machine events
+- **Plan entity** — LicenseSubscriptionPlan config entities link product variations to license tiers; full CRUD admin UI
+- **Seat cap enforcement** — SeatCapService::mayAssignRole() checked before every role grant; cache cleared after every state change
+- **Manual-admin protection** — Subscriptions granted with `granted_by_action = manual_admin` are never auto-revoked
+- **Idempotent saga queue** — All state-mutating operations are enqueued; duplicate event keys are silently dropped via UNIQUE constraint
+- **Dunning grace window** — Payment failures set payment\_failed\_since once (COALESCE-guarded); cron revokes roles only after the grace window expires
+- **Choose-plan tokens** — Single-use, UID-bound, SHA-256-hashed, TTL-configurable tokens for the deprecation email workflow
+- **Plan deprecation workflow** — Deactivating a plan triggers deprecation emails to all active subscribers with choose-plan links
+- **Subscribers report** — Admin report of all subscription state rows with state badges and user links
+- **Subscription settings form** — All lifecycle timing, grace windows, and notification toggles in one admin form
+- **Config-sync guard** — All state-mutating code is skipped during `drush cim` / config import
+
+---
+
 ## Quota & metering reset semantics
 
 The module tracks usage in **two separate database tables with deliberately
