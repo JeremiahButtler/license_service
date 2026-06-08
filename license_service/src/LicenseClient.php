@@ -7,10 +7,12 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\license_service\Crypto\Ed25519Verifier;
 use Drupal\license_service\Key\LicenseKeyProvider;
+use Drupal\Component\Uuid\UuidInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\BadResponseException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * HTTP client for the License Verification Server.
@@ -86,6 +88,8 @@ class LicenseClient {
     protected readonly ClientInterface $httpClient,
     protected readonly LoggerChannelFactoryInterface $loggerFactory,
     protected readonly LicenseKeyProvider $keyProvider,
+    protected readonly UuidInterface $uuid,
+    protected readonly RequestStack $requestStack,
   ) {
     $this->logger   = $this->loggerFactory->get('license_service');
     $this->verifier = new Ed25519Verifier();
@@ -941,8 +945,9 @@ class LicenseClient {
    * Generates a stable site machine ID from a UUID + site URL hash.
    */
   protected function generateMachineId(): string {
-    $uuid    = \Drupal::service('uuid')->generate();
-    $siteUrl = \Drupal::request()->getSchemeAndHttpHost();
+    $uuid    = $this->uuid->generate();
+    $req     = $this->requestStack->getCurrentRequest();
+    $siteUrl = $req ? $req->getSchemeAndHttpHost() : '';
     return $uuid . '-' . substr(hash('sha256', $siteUrl), 0, 8);
   }
 

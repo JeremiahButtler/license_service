@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\license_service\Form;
 
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\license_service\LicenseManagerService;
@@ -20,6 +21,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Author: Jeremiah Buttler.
  */
 class TiersForm extends ConfigFormBase {
+
+  // DependencySerializationTrait re-resolves injected services from the
+  // container when the form is woken from the AJAX form-cache, so
+  // $licenseManager is never NULL by the time submitForm() runs. Replaces
+  // the previous runtime `\Drupal::service(...)` fallback.
+  // Author: Jeremiah Buttler
+  use DependencySerializationTrait;
 
   /**
    * Config object name for tier definitions.
@@ -49,10 +57,10 @@ class TiersForm extends ConfigFormBase {
   /**
    * The license manager, for cache invalidation after save.
    *
-   * Nullable because AJAX form-cache deserialization can leave injected
-   * services uninitialized; the submit handler falls back to the container.
+   * DependencySerializationTrait re-injects this from the container on
+   * deserialization, so it is always set by the time the submit handler runs.
    */
-  private ?LicenseManagerService $licenseManager = NULL;
+  private LicenseManagerService $licenseManager;
 
   /**
    * {@inheritdoc}
@@ -309,8 +317,8 @@ class TiersForm extends ConfigFormBase {
     $this->config(self::SETTINGS)->set('tiers', $saved)->save();
 
     // Flush cached license status so level/feature reads see the new config.
-    // Defensive: $licenseManager may be unset on AJAX form-cache deserialization.
-    ($this->licenseManager ?? \Drupal::service('license_service.license_manager'))->invalidateCache();
+    // DependencySerializationTrait guarantees $licenseManager is restored.
+    $this->licenseManager->invalidateCache();
 
     parent::submitForm($form, $form_state);
   }

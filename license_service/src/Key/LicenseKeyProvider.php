@@ -3,6 +3,7 @@
 namespace Drupal\license_service\Key;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\Core\State\StateInterface;
 
 /**
@@ -23,6 +24,10 @@ class LicenseKeyProvider {
   public function __construct(
     protected readonly ConfigFactoryInterface $configFactory,
     protected readonly StateInterface $state,
+    // Optional Key module integration. Injected via the `@?key.repository`
+    // service reference in services.yml so sites without the Key module
+    // contrib don't fail container compilation. May be NULL at runtime.
+    protected readonly ?object $keyRepository = NULL,
   ) {}
 
   /**
@@ -41,8 +46,9 @@ class LicenseKeyProvider {
     if ($provider === 'settings_php') {
       // The key is set in settings.php as:
       // $settings['license_service_key'] = 'XXXX-XXXX-XXXX-XXXX';.
-      $settings = \Drupal::service('settings');
-      return (string) ($settings->get('license_service_key') ?? '');
+      // Settings is a static API (intentional in Drupal core) — there is no
+      // injectable Settings service. Author: Jeremiah Buttler
+      return (string) Settings::get('license_service_key', '');
     }
 
     // State fallback — only suitable for local development.
@@ -71,7 +77,7 @@ class LicenseKeyProvider {
    * Returns TRUE if the Key module service is available.
    */
   public function hasKeyModuleSupport(): bool {
-    return \Drupal::hasService('key.repository');
+    return $this->keyRepository !== NULL;
   }
 
   /**
@@ -93,17 +99,17 @@ class LicenseKeyProvider {
    * Retrieves the key from the Key module by key entity ID.
    */
   protected function getFromKeyModule(string $keyId): string {
-    if ($keyId === '' || !$this->hasKeyModuleSupport()) {
+    if ($keyId === '' || $this->keyRepository === NULL) {
       return '';
     }
     try {
       /** @var \Drupal\key\KeyRepositoryInterface $repo */
-      $repo = \Drupal::service('key.repository');
+      $repo = $this->keyRepository;
       $key  = $repo->getKey($keyId);
       return $key ? (string) $key->getKeyValue() : '';
     }
     catch (\Throwable) {
-      // Key module unavailable or key entity deleted; fail silently.
+      // Key module entity deleted or otherwise unloadable; fail silently.
       return '';
     }
   }

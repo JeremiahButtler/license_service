@@ -4,7 +4,10 @@ services:
     arguments:
       - '@config.factory'
       - '@state'
-      # Key module integration handled at runtime via \Drupal::hasService('key.repository')
+      # Optional Key module integration. `@?` means "inject NULL if the
+      # service is not registered" — sites without the Key contrib module
+      # compile and run normally; sites with it get the repository injected.
+      - '@?key.repository'
 
   license_service.license_client:
     class: Drupal\license_service\LicenseClient
@@ -14,6 +17,8 @@ services:
       - '@http_client'
       - '@logger.factory'
       - '@license_service.key_provider'
+      - '@uuid'
+      - '@request_stack'
 
   license_service.license_manager:
     class: Drupal\license_service\LicenseManagerService

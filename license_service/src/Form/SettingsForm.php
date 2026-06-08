@@ -30,6 +30,9 @@ class SettingsForm extends ConfigFormBase {
     protected readonly LicenseKeyProvider $keyProvider,
     protected readonly LicenseClient $licenseClient,
     protected readonly LicenseManagerService $licenseManager,
+    // Optional Key module integration — NULL when the contrib module is not
+    // installed. Author: Jeremiah Buttler
+    protected readonly ?object $keyRepository = NULL,
   ) {}
 
   /**
@@ -40,6 +43,7 @@ class SettingsForm extends ConfigFormBase {
       $container->get('license_service.key_provider'),
       $container->get('license_service.license_client'),
       $container->get('license_service.license_manager'),
+      $container->has('key.repository') ? $container->get('key.repository') : NULL,
     );
     $instance->setConfigFactory($container->get('config.factory'));
     $instance->setStringTranslation($container->get('string_translation'));
@@ -315,10 +319,10 @@ class SettingsForm extends ConfigFormBase {
    * Returns options for the Key module key selector.
    */
   protected function getKeyModuleOptions(): array {
-    if (!\Drupal::hasService('key.repository')) {
+    if ($this->keyRepository === NULL) {
       return [];
     }
-    $keys = \Drupal::service('key.repository')->getKeys();
+    $keys = $this->keyRepository->getKeys();
     $opts = ['' => $this->t('- Select a key -')];
     foreach ($keys as $key) {
       $opts[$key->id()] = $key->label();
